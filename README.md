@@ -352,20 +352,6 @@ npm install
 - Ensure `globals.css` is imported in `layout.tsx`
 - Check that files match the glob pattern in `tailwind.config.ts`
 
-## FAQ
-
-**Q: Can users create accounts?**
-A: Currently, the platform uses mock authentication. Account creation logic can be implemented with a backend service.
-
-**Q: Is data persistent?**
-A: The current version uses mock data stored in memory. For production, implement a database integration (Supabase, Neon, etc.).
-
-**Q: How do I customize the design?**
-A: Edit the design tokens in `app/globals.css` or use the shadcn CLI to customize components.
-
-**Q: Can I use this as a template?**
-A: Yes! This project is designed to be a starting point for mental health platforms.
-
 ## Security & Privacy
 
 - **Data Encryption**: Implement HTTPS for all connections
@@ -382,9 +368,8 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Support & Contact
 
-- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/yourusername/harmony/issues)
-- **Discussions**: Join community discussions on [GitHub Discussions](https://github.com/yourusername/harmony/discussions)
-- **Email**: contact@harmony.example.com (replace with actual contact)
+- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/waklarua/harmony/issues)
+- **Discussions**: Join community discussions on [GitHub Discussions](https://github.com/waklarua/harmony/discussions)
 - **Documentation**: Full documentation available in `/docs`
 
 ## Acknowledgments
@@ -411,6 +396,6 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 **Version**: 0.1.0  
 **Last Updated**: 2024  
-**Maintained By**: Harmony Team
+**Maintained By**: XYZ Solutions
 
 For questions or feedback, please open an issue on GitHub or contact the development team.
