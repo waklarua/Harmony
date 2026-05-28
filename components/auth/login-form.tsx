@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Heart, Eye, EyeOff, Shield } from "lucide-react"
+import { Heart, Eye, EyeOff, Shield, AlertCircle } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
 
 export function LoginForm() {
   const router = useRouter()
@@ -17,21 +18,24 @@ export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
-    // Simulate authentication - in production, this would call your auth API
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      await authClient.signIn.email({
+        email,
+        password,
+      })
 
-    // Route based on demo email patterns
-    if (email.includes("guide") || email.includes("counselor")) {
-      router.push("/guide/dashboard")
-    } else if (email.includes("admin") || email.includes("steward")) {
-      router.push("/steward/dashboard")
-    } else {
       router.push("/seeker/dashboard")
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please check your credentials.")
+      setIsLoading(false)
     }
   }
 
@@ -55,6 +59,12 @@ export function LoginForm() {
             <CardDescription>Sign in to continue your journey</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -108,13 +118,7 @@ export function LoginForm() {
               </Link>
             </div>
 
-            {/* Demo accounts hint */}
-            <div className="mt-6 rounded-lg border border-border bg-muted/50 p-4">
-              <p className="text-xs text-muted-foreground">
-                <strong>Demo:</strong> Use any email. Include &quot;guide&quot; for counselor view, &quot;steward&quot;
-                for admin view, or any other email for seeker view.
-              </p>
-            </div>
+
           </CardContent>
         </Card>
       </main>
