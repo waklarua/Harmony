@@ -15,16 +15,19 @@ type EmptyStateVariant =
   | "no-past-clients"
   | "no-search-results"
   | "no-resources"
+  | "no-data"
 
 interface EmptyStateProps {
   variant: EmptyStateVariant
   searchQuery?: string
+  title?: string
+  description?: string
 }
 
 // Get 3 recommended counselors for the empty state
 const recommendedCounselors = mockCounselors.slice(0, 3)
 
-export function EmptyState({ variant, searchQuery }: EmptyStateProps) {
+export function EmptyState({ variant, searchQuery, title: customTitle, description: customDescription }: EmptyStateProps) {
   const configs: Record<
     EmptyStateVariant,
     {
@@ -78,10 +81,19 @@ export function EmptyState({ variant, searchQuery }: EmptyStateProps) {
       description: "Try adjusting your search or selecting a different category.",
       cta: { label: "View All Resources", href: "/seeker/resources" },
     },
+    "no-data": {
+      icon: Search,
+      title: "No data available",
+      description: "There&apos;s no data to display right now.",
+    },
   }
 
-  const config = configs[variant]
+  let config = configs[variant]
   const Icon = config.icon
+
+  // Allow overrides for title and description
+  if (customTitle) config = { ...config, title: customTitle }
+  if (customDescription) config = { ...config, description: customDescription }
 
   return (
     <Card>

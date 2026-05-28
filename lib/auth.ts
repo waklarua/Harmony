@@ -25,23 +25,6 @@ if (trustedOrigins.length === 0) {
   trustedOrigins.push('http://localhost:3000')
 }
 
-// Function to check if origin is trusted (supports v0 preview URLs dynamically)
-function isOriginTrusted(origin: string): boolean {
-  // Check static list
-  if (trustedOrigins.includes(origin)) {
-    return true
-  }
-  // Allow v0 preview domains (vusercontent.net)
-  if (origin.endsWith('.vusercontent.net')) {
-    return true
-  }
-  // Allow vercel preview URLs
-  if (origin.includes('.vercel.app')) {
-    return true
-  }
-  return false
-}
-
 // Determine base URL
 const baseURL =
   process.env.BETTER_AUTH_URL ||
@@ -56,7 +39,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   appName: 'Harmony',
   baseURL,
-  trustedOrigins: (origin) => isOriginTrusted(origin),
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
   },
