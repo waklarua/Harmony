@@ -4,24 +4,25 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Heart, Eye, EyeOff, Shield, CheckCircle } from "lucide-react"
+import { Heart, Eye, EyeOff, Shield, CheckCircle, AlertCircle } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
+import { updateUserRole } from "@/app/actions/user"
 
 export function SignupForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialRole = searchParams.get("role") || "seeker"
 
   const [showPassword, setShowPassword] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<"seeker" | "guide">(initialRole as "seeker" | "guide")
+  const [role, setRole] = useState<"seeker" | "guide">("seeker")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(1)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,12 +34,27 @@ export function SignupForm() {
     }
 
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setError(null)
 
-    if (role === "guide") {
-      router.push("/guide/dashboard")
-    } else {
-      router.push("/seeker/dashboard")
+    try {
+      await authClient.signUp.email({
+        email,
+        password,
+        name,
+      })
+
+      // Update user role after signup
+      await updateUserRole(role)
+
+      if (role === "guide") {
+        router.push("/guide/dashboard")
+      } else {
+        router.push("/seeker/dashboard")
+      }
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || "Failed to create account. Please try again.")
+      setIsLoading(false)
     }
   }
 
@@ -64,6 +80,13 @@ export function SignupForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+
             {/* Progress indicator */}
             <div className="mb-6 flex gap-2">
               {[1, 2].map((s) => (
