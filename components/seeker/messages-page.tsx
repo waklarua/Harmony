@@ -126,12 +126,6 @@ export function MessagesPage() {
                 variant="no-data"
                 title="No messages yet"
                 description="Start a conversation with your counselor"
-                action={
-                  <Button variant="outline">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Browse Counselors
-                  </Button>
-                }
               />
             )}
           </TabsContent>

@@ -218,7 +218,7 @@ export function SettingsPage() {
                           <MapPin className="h-3 w-3" />
                           <span>{activity.location}</span>
                           <span>•</span>
-                          <span>{formatEATTime(activity.time)}</span>
+                          <span>{formatEATTime(activity.time.toISOString())}</span>
                         </div>
                       </div>
                     </div>
