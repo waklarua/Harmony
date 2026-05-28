@@ -37,14 +37,25 @@ export function SignupForm() {
     setError(null)
 
     try {
-      await authClient.signUp.email({
+      const result = await authClient.signUp.email({
         email,
         password,
         name,
       })
 
-      // Update user role after signup
-      await updateUserRole(role)
+      if (result.error) {
+        throw new Error(result.error.message || "Failed to create account")
+      }
+
+      // Small delay to ensure session cookie is set before updating role
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Update user role after signup - wrapped in try/catch to not block redirect
+      try {
+        await updateUserRole(role)
+      } catch (roleError) {
+        console.log("[v0] Role update failed, will use default role:", roleError)
+      }
 
       if (role === "guide") {
         router.push("/guide/dashboard")
