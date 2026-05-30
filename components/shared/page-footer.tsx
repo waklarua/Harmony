@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Heart, Facebook, Linkedin, Youtube } from "lucide-react"
 import { CrisisLink } from "@/components/shared/crisis-banner"
+import { APP_VERSION } from "@/lib/version"
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -138,6 +139,9 @@ export function PageFooter() {
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-sm text-muted-foreground">
             © 2025 Harmony. All rights reserved. Made with care in Ethiopia.
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Version <span className="font-medium text-foreground">{APP_VERSION}</span>
           </p>
         </div>
       </div>
