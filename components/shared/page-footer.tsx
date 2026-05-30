@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Heart, Facebook, Linkedin, Youtube } from "lucide-react"
 import { CrisisLink } from "@/components/shared/crisis-banner"
+import { APP_VERSION } from "@/lib/version"
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -57,6 +58,9 @@ export function PageFooter() {
               >
                 <Youtube className="h-5 w-5" />
               </a>
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              Version <span className="font-medium text-foreground">{APP_VERSION}</span>
             </div>
           </div>
           <div className="group rounded-xl border border-primary/20 bg-background/50 p-4 shadow-[0_0_15px_rgba(74,247,255,0.15)] transition-all duration-300 hover:border-primary/40 hover:bg-background/70 hover:shadow-[0_0_25px_rgba(74,247,255,0.35)]">
