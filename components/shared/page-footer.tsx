@@ -59,6 +59,9 @@ export function PageFooter() {
                 <Youtube className="h-5 w-5" />
               </a>
             </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              Version <span className="font-medium text-foreground">{APP_VERSION}</span>
+            </div>
           </div>
           <div className="group rounded-xl border border-primary/20 bg-background/50 p-4 shadow-[0_0_15px_rgba(74,247,255,0.15)] transition-all duration-300 hover:border-primary/40 hover:bg-background/70 hover:shadow-[0_0_25px_rgba(74,247,255,0.35)]">
             <h4 className="font-semibold">Platform</h4>
@@ -139,9 +142,6 @@ export function PageFooter() {
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-sm text-muted-foreground">
             © 2025 Harmony. All rights reserved. Made with care in Ethiopia.
-          </p>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            Version <span className="font-medium text-foreground">{APP_VERSION}</span>
           </p>
         </div>
       </div>
