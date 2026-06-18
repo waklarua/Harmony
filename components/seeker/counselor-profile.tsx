@@ -2,32 +2,94 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SeekerLayout } from "./seeker-layout"
-import { Star, CheckCircle, Calendar, Clock, Globe, Award, ArrowLeft, Video, MessageSquare, Phone } from "lucide-react"
-import { mockCounselors } from "@/lib/mock-data"
+import {
+  Star,
+  CheckCircle,
+  Calendar,
+  Clock,
+  Globe,
+  Award,
+  ArrowLeft,
+  Video,
+  MessageSquare,
+  Phone,
+  Loader2,
+} from "lucide-react"
 import { formatCurrency } from "@/lib/format"
+import { createBooking } from "@/app/actions/booking"
+import type { CounselorProfileData } from "@/app/actions/dashboard"
 
 interface CounselorProfileProps {
-  counselorId: string
+  counselor: CounselorProfileData
 }
 
-export function CounselorProfile({ counselorId }: CounselorProfileProps) {
-  const counselor = mockCounselors.find((c) => c.id === counselorId) || mockCounselors[0]
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+function getNextWeekDates() {
+  const dates: { day: string; date: string; full: string; iso: string }[] = []
+  const today = new Date()
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-  const availableTimes = ["9:00 AM EAT", "10:00 AM EAT", "11:00 AM EAT", "2:00 PM EAT", "3:00 PM EAT", "4:00 PM EAT"]
-  const availableDates = [
-    { day: "Mon", date: "23", full: "Dec 23" },
-    { day: "Wed", date: "25", full: "Dec 25" },
-    { day: "Fri", date: "27", full: "Dec 27" },
-    { day: "Mon", date: "30", full: "Dec 30" },
-  ]
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today)
+    d.setDate(d.getDate() + i)
+    dates.push({
+      day: dayNames[d.getDay()],
+      date: d.getDate().toString(),
+      full: d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      iso: d.toISOString().split("T")[0],
+    })
+  }
+  return dates
+}
+
+interface TimeSlot {
+  label: string
+  value: string
+}
+
+const timeSlots: TimeSlot[] = [
+  { label: "9:00 AM", value: "09:00" },
+  { label: "10:00 AM", value: "10:00" },
+  { label: "11:00 AM", value: "11:00" },
+  { label: "2:00 PM", value: "14:00" },
+  { label: "3:00 PM", value: "15:00" },
+  { label: "4:00 PM", value: "16:00" },
+]
+
+export function CounselorProfile({ counselor }: CounselorProfileProps) {
+  const router = useRouter()
+  const [selectedDate, setSelectedDate] = useState<{ full: string; iso: string } | null>(null)
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [isBooking, setIsBooking] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+
+  const availableDates = getNextWeekDates()
+
+  const handleBook = async () => {
+    if (!selectedDate || !selectedTime) return
+    setIsBooking(true)
+    setBookingError(null)
+    try {
+      const time = timeSlots.find((t) => t.label === selectedTime)
+      if (!time) throw new Error("Invalid time selected")
+      await createBooking({
+        counselorId: counselor.id,
+        sessionType: "video",
+        scheduledAt: `${selectedDate.iso}T${time.value}:00.000Z`,
+      })
+      router.push("/seeker/dashboard")
+      router.refresh()
+    } catch (err: any) {
+      setBookingError(err?.message || "Failed to book session. Please try again.")
+      setIsBooking(false)
+    }
+  }
 
   return (
     <SeekerLayout>
@@ -68,14 +130,18 @@ export function CounselorProfile({ counselorId }: CounselorProfileProps) {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Award className="h-4 w-4" />
-                        <span>{counselor.yearsExperience} years experience</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Globe className="h-4 w-4" />
-                        <span>{counselor.languages.join(", ")}</span>
-                      </div>
+                      {counselor.certifications.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Award className="h-4 w-4" />
+                          <span>{counselor.certifications.length} certifications</span>
+                        </div>
+                      )}
+                      {counselor.languages.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Globe className="h-4 w-4" />
+                          <span>{counselor.languages.join(", ")}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -140,35 +206,13 @@ export function CounselorProfile({ counselorId }: CounselorProfileProps) {
               <TabsContent value="reviews" className="mt-4">
                 <Card>
                   <CardContent className="p-6">
-                    <div className="space-y-6">
-                      {[
-                        {
-                          author: "B.T.",
-                          date: "2 weeks ago",
-                          rating: 5,
-                          text: "Incredibly understanding and helpful. I've made more progress in a few sessions than I did in months elsewhere.",
-                        },
-                        {
-                          author: "T.L.",
-                          date: "1 month ago",
-                          rating: 5,
-                          text: "Creates such a safe and comfortable space. I always feel heard and supported.",
-                        },
-                      ].map((review, index) => (
-                        <div key={index} className="border-b border-border pb-6 last:border-0 last:pb-0">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{review.author}</span>
-                            <span className="text-sm text-muted-foreground">{review.date}</span>
-                          </div>
-                          <div className="mt-1 flex gap-0.5">
-                            {Array.from({ length: review.rating }).map((_, i) => (
-                              <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                            ))}
-                          </div>
-                          <p className="mt-2 text-sm text-muted-foreground">{review.text}</p>
-                        </div>
-                      ))}
-                    </div>
+                    {counselor.reviewCount > 0 ? (
+                      <div className="space-y-6">
+                        <p className="text-muted-foreground">No reviews to display yet.</p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No reviews yet. Be the first to leave a review after your session.</p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -189,18 +233,18 @@ export function CounselorProfile({ counselorId }: CounselorProfileProps) {
                 <div>
                   <label className="text-sm font-medium">Select a Date</label>
                   <div className="mt-2 grid grid-cols-4 gap-2">
-                    {availableDates.map((date) => (
+                    {availableDates.map((d) => (
                       <button
-                        key={date.full}
-                        onClick={() => setSelectedDate(date.full)}
+                        key={d.iso}
+                        onClick={() => setSelectedDate(d)}
                         className={`flex flex-col items-center rounded-lg border-2 p-2 transition-colors ${
-                          selectedDate === date.full
+                          selectedDate?.iso === d.iso
                             ? "border-primary bg-primary/10"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <span className="text-xs text-muted-foreground">{date.day}</span>
-                        <span className="text-lg font-semibold">{date.date}</span>
+                        <span className="text-xs text-muted-foreground">{d.day}</span>
+                        <span className="text-lg font-semibold">{d.date}</span>
                       </button>
                     ))}
                   </div>
@@ -211,29 +255,47 @@ export function CounselorProfile({ counselorId }: CounselorProfileProps) {
                   <div>
                     <label className="text-sm font-medium">Select a Time (EAT)</label>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                      {availableTimes.map((time) => (
+                      {timeSlots.map((time) => (
                         <button
-                          key={time}
-                          onClick={() => setSelectedTime(time)}
+                          key={time.value}
+                          onClick={() => setSelectedTime(time.label)}
                           className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-colors ${
-                            selectedTime === time
+                            selectedTime === time.label
                               ? "border-primary bg-primary/10"
                               : "border-border hover:border-primary/50"
                           }`}
                         >
                           <Clock className="h-3 w-3" />
-                          {time.replace(" EAT", "")}
+                          {time.label}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
 
+                {bookingError && (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                    <p className="text-sm text-destructive">{bookingError}</p>
+                  </div>
+                )}
+
                 {/* Book Button */}
-                <Button className="w-full" size="lg" disabled={!selectedDate || !selectedTime}>
-                  {selectedDate && selectedTime
-                    ? `Book ${selectedDate} at ${selectedTime.replace(" EAT", "")}`
-                    : "Select date and time"}
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={!selectedDate || !selectedTime || isBooking}
+                  onClick={handleBook}
+                >
+                  {isBooking ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : selectedDate && selectedTime ? (
+                    `Book ${selectedDate.full} at ${selectedTime}`
+                  ) : (
+                    "Select date and time"
+                  )}
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">Free cancellation up to 24 hours before</p>

@@ -18,7 +18,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react"
-import { mockPlatformStats, mockPendingCounselors, mockSupportTickets } from "@/lib/mock-data"
 import { Line, LineChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
@@ -29,8 +28,38 @@ const sessionTrendData = [
   { week: "W4", sessions: 262 },
 ]
 
-export function StewardDashboard() {
-  const openTickets = mockSupportTickets.filter((t) => t.status !== "resolved")
+interface SupportTicket {
+  id: string
+  userName: string
+  subject: string
+  status: string
+  priority: string
+  createdAt: string
+}
+
+interface StewardDashboardProps {
+  stats: {
+    totalUsers: number
+    activeUsers: number
+    totalCounselors: number
+    pendingVerifications: number
+    totalSessions: number
+    sessionsThisMonth: number
+    averageRating: number
+    supportTickets: number
+  }
+  pendingCounselors: Array<{
+    id: string
+    name: string
+    credentials: string
+    submittedAt: string
+    avatar: string | null
+  }>
+  supportTickets: SupportTicket[]
+}
+
+export function StewardDashboard({ stats, pendingCounselors, supportTickets }: StewardDashboardProps) {
+  const openTickets = supportTickets.filter((t) => t.status !== "resolved")
 
   return (
     <StewardLayout>
@@ -46,9 +75,9 @@ export function StewardDashboard() {
               <Button variant="outline" className="gap-2 bg-transparent">
                 <UserCheck className="h-4 w-4" />
                 Review Applications
-                {mockPlatformStats.pendingVerifications > 0 && (
+                  {stats.pendingVerifications > 0 && (
                   <Badge variant="destructive" className="ml-1">
-                    {mockPlatformStats.pendingVerifications}
+                    {stats.pendingVerifications}
                   </Badge>
                 )}
               </Button>
@@ -64,7 +93,7 @@ export function StewardDashboard() {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{mockPlatformStats.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Total Users</p>
               </div>
             </CardContent>
@@ -75,7 +104,7 @@ export function StewardDashboard() {
                 <UserCheck className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{mockPlatformStats.totalCounselors}</p>
+                <p className="text-2xl font-bold">{stats.totalCounselors}</p>
                 <p className="text-sm text-muted-foreground">Active Counselors</p>
               </div>
             </CardContent>
@@ -86,7 +115,7 @@ export function StewardDashboard() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{mockPlatformStats.sessionsThisMonth}</p>
+                <p className="text-2xl font-bold">{stats.sessionsThisMonth}</p>
                 <p className="text-sm text-muted-foreground">Sessions This Month</p>
               </div>
             </CardContent>
@@ -97,7 +126,7 @@ export function StewardDashboard() {
                 <Star className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{mockPlatformStats.averageRating}</p>
+                <p className="text-2xl font-bold">{stats.averageRating}</p>
                 <p className="text-sm text-muted-foreground">Platform Rating</p>
               </div>
             </CardContent>
@@ -167,9 +196,9 @@ export function StewardDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {mockPendingCounselors.length > 0 ? (
+                {pendingCounselors.length > 0 ? (
                   <div className="space-y-4">
-                    {mockPendingCounselors.map((counselor) => (
+                    {pendingCounselors.map((counselor) => (
                       <div
                         key={counselor.id}
                         className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -214,7 +243,7 @@ export function StewardDashboard() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Alerts */}
-            {(mockPlatformStats.pendingVerifications > 0 || openTickets.length > 0) && (
+            {(stats.pendingVerifications > 0 || openTickets.length > 0) && (
               <Card className="border-destructive/20 bg-destructive/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -223,9 +252,9 @@ export function StewardDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {mockPlatformStats.pendingVerifications > 0 && (
+                  {stats.pendingVerifications > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span>{mockPlatformStats.pendingVerifications} counselor verifications pending</span>
+                      <span>{stats.pendingVerifications} counselor verifications pending</span>
                       <Link href="/steward/counselors">
                         <Button variant="ghost" size="sm">
                           Review
@@ -262,7 +291,7 @@ export function StewardDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockSupportTickets.slice(0, 3).map((ticket) => (
+                  {supportTickets.slice(0, 3).map((ticket) => (
                     <div
                       key={ticket.id}
                       className="flex items-start justify-between rounded-lg border border-border p-3"
@@ -299,15 +328,15 @@ export function StewardDashboard() {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Active users today</span>
-                  <span className="font-medium">{mockPlatformStats.activeUsers}</span>
+                  <span className="font-medium">{stats.activeUsers}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total sessions</span>
-                  <span className="font-medium">{mockPlatformStats.totalSessions.toLocaleString()}</span>
+                  <span className="font-medium">{stats.totalSessions.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Support tickets</span>
-                  <span className="font-medium">{mockPlatformStats.supportTickets}</span>
+                  <span className="font-medium">{stats.supportTickets}</span>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">All times displayed in EAT (UTC+3)</p>

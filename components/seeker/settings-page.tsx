@@ -24,10 +24,17 @@ import {
   Download,
   MapPin,
 } from "lucide-react"
-import { mockUser } from "@/lib/mock-data"
 import { formatCurrency, formatEATTime } from "@/lib/format"
 
-export function SettingsPage() {
+export function SettingsPage({
+  userName = "User",
+  userAvatar = "",
+  userEmail = "",
+}: {
+  userName?: string
+  userAvatar?: string
+  userEmail?: string
+}) {
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
@@ -98,8 +105,8 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
-                <AvatarFallback className="text-2xl">{mockUser.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={userAvatar || "/placeholder.svg"} alt={userName} />
+                <AvatarFallback className="text-2xl">{userName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="space-y-2">
                 <Button variant="outline" className="gap-2 bg-transparent">
@@ -129,7 +136,7 @@ export function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" defaultValue={mockUser.email} />
+                <Input id="email" type="email" defaultValue={userEmail} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>

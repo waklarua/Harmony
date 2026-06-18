@@ -43,11 +43,20 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: {
+      role: {
+        type: 'string',
+        required: false,
+        defaultValue: 'seeker',
+        input: true,
+      },
+    },
+  },
   advanced: {
     defaultCookieAttributes: isDevelopment
       ? {
-          sameSite: 'none',
-          secure: true,
+          sameSite: 'lax',
         }
       : undefined,
   },

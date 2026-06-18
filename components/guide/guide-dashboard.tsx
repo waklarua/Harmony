@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { GuideLayout } from "./guide-layout"
 import { Calendar, Clock, ArrowRight, Video, Users, TrendingUp, Star, MessageSquare, FileText } from "lucide-react"
-import { mockClients, mockGuideSchedule, mockGuide } from "@/lib/mock-data"
 import { formatCurrency } from "@/lib/format"
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
@@ -18,9 +17,38 @@ const earningsData = [
   { month: "Dec", amount: 182400 },
 ]
 
-export function GuideDashboard() {
-  const todaysSessions = mockGuideSchedule.filter((s) => s.status === "upcoming")
-  const activeClients = mockClients.filter((c) => c.status === "active")
+interface GuideDashboardProps {
+  todaysSessions: Array<{
+    id: string
+    clientId: string
+    clientName: string
+    clientAvatar: string | null
+    time: string
+    duration: number | null
+    status: string
+    type: string
+  }>
+  activeClients: Array<{
+    id: string
+    name: string
+    avatar: string | null
+    lastSession: string
+    totalSessions: number
+    status: string
+  }>
+  bookingRequests: Array<{
+    id: string
+    clientId: string
+    clientName: string
+    clientAvatar: string | null
+    date: string
+    time: string
+    status: string
+  }>
+  guideName: string
+}
+
+export function GuideDashboard({ todaysSessions, activeClients, bookingRequests, guideName }: GuideDashboardProps) {
 
   return (
     <GuideLayout>
@@ -28,7 +56,7 @@ export function GuideDashboard() {
         {/* Welcome Section */}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Welcome back, Dr. {mockGuide.name.split(" ")[1]}
+            Welcome back, Dr. {guideName.split(" ")[1]}
           </h1>
           <p className="text-muted-foreground">
             {todaysSessions.length} session{todaysSessions.length !== 1 ? "s" : ""} scheduled today
@@ -227,19 +255,25 @@ export function GuideDashboard() {
                 <CardTitle className="text-lg">Booking Requests</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-start justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/professional-portrait.png" alt="Musse Ahmed" />
-                      <AvatarFallback>M</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">Musse Ahmed</p>
-                      <p className="text-xs text-muted-foreground">Requested today</p>
+                {bookingRequests.length > 0 ? (
+                  bookingRequests.map((req) => (
+                    <div key={req.id} className="flex items-start justify-between p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={req.clientAvatar || "/placeholder.svg"} alt={req.clientName} />
+                          <AvatarFallback>{req.clientName.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{req.clientName}</p>
+                          <p className="text-xs text-muted-foreground">Requested {req.date}</p>
+                        </div>
+                      </div>
+                      <Badge className="text-xs">{req.status === 'pending' ? 'New' : req.status}</Badge>
                     </div>
-                  </div>
-                  <Badge className="text-xs">New</Badge>
-                </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No pending booking requests</p>
+                )}
               </CardContent>
             </Card>
 
@@ -249,14 +283,18 @@ export function GuideDashboard() {
                 <CardTitle className="text-lg">Quick Tools</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2">
-                <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
-                  <FileText className="h-4 w-4" />
-                  Session Notes Template
-                </Button>
-                <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
-                  <MessageSquare className="h-4 w-4" />
-                  Message a Client
-                </Button>
+                <Link href="/guide/clients">
+                  <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
+                    <FileText className="h-4 w-4" />
+                    Session Notes
+                  </Button>
+                </Link>
+                <Link href="/guide/messages">
+                  <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
+                    <MessageSquare className="h-4 w-4" />
+                    Message a Client
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>

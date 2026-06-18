@@ -11,9 +11,24 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, Clock, Edit2, User, Heart, Target, MessageSquare, Star } from "lucide-react"
-import { mockUser, mockCounselors } from "@/lib/mock-data"
 
-export function ProfilePage() {
+interface ProfilePageProps {
+  userName?: string
+  userAvatar?: string
+  joinedAt?: string
+  completedSessionsCount?: number
+  upcomingSessions?: { id: string; counselorName: string; counselorAvatar: string; date: string; time: string; type: string }[]
+  pastSessions?: { id: string; counselorName: string; counselorAvatar: string; date: string; rating: number }[]
+}
+
+export function ProfilePage({
+  userName = "User",
+  userAvatar = "",
+  joinedAt = "Recently",
+  completedSessionsCount = 0,
+  upcomingSessions = [],
+  pastSessions = [],
+}: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [bio, setBio] = useState(
     "I'm on a journey to better understand myself and improve my mental well-being. Looking forward to growing with the support of professional guidance.",
@@ -22,31 +37,6 @@ export function ProfilePage() {
   const [goals, setGoals] = useState(["anxiety", "stress", "self-esteem"])
   const [communicationStyle, setCommunicationStyle] = useState("balanced")
   const [reminderPreference, setReminderPreference] = useState("1-hour")
-
-  const upcomingSessions = [
-    {
-      id: 1,
-      counselor: mockCounselors[0],
-      date: "Tomorrow",
-      time: "10:00 AM EAT",
-      type: "Video Session",
-    },
-    {
-      id: 2,
-      counselor: mockCounselors[1],
-      date: "Jan 25, 2024",
-      time: "2:00 PM EAT",
-      type: "Chat Session",
-    },
-  ]
-
-  const pastSessions = [
-    { id: 1, counselor: mockCounselors[0], date: "Jan 15, 2024", rating: 5 },
-    { id: 2, counselor: mockCounselors[0], date: "Jan 8, 2024", rating: 5 },
-    { id: 3, counselor: mockCounselors[1], date: "Jan 5, 2024", rating: 4 },
-    { id: 4, counselor: mockCounselors[0], date: "Dec 28, 2023", rating: 5 },
-    { id: 5, counselor: mockCounselors[1], date: "Dec 20, 2023", rating: 4 },
-  ]
 
   const therapyGoals = [
     { id: "anxiety", label: "Managing Anxiety" },
@@ -70,13 +60,13 @@ export function ProfilePage() {
         <CardContent className="pt-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
-              <AvatarFallback className="text-3xl">{mockUser.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={userAvatar || "/placeholder.svg"} alt={userName} />
+              <AvatarFallback className="text-3xl">{userName.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-center sm:text-left">
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h1 className="text-2xl font-semibold">{mockUser.name}</h1>
+                  <h1 className="text-2xl font-semibold">{userName}</h1>
                   <p className="text-muted-foreground">{pronouns}</p>
                 </div>
                 <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setIsEditing(!isEditing)}>
@@ -87,11 +77,11 @@ export function ProfilePage() {
               <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  <span>Joined December 2023</span>
+                  <span>Joined {joinedAt}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Heart className="h-4 w-4" />
-                  <span>12 Sessions Completed</span>
+                  <span>{completedSessionsCount} Sessions Completed</span>
                 </div>
                 <Badge variant="secondary">Active Member</Badge>
               </div>
@@ -197,11 +187,11 @@ export function ProfilePage() {
             {upcomingSessions.map((session) => (
               <div key={session.id} className="flex items-center gap-3 rounded-lg border p-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={session.counselor.avatar || "/placeholder.svg"} alt={session.counselor.name} />
-                  <AvatarFallback>{session.counselor.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={session.counselorAvatar || "/placeholder.svg"} alt={session.counselorName} />
+                  <AvatarFallback>{session.counselorName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="font-medium text-sm">{session.counselor.name}</p>
+                  <p className="font-medium text-sm">{session.counselorName}</p>
                   <p className="text-xs text-muted-foreground">
                     {session.date} at {session.time}
                   </p>
@@ -230,11 +220,11 @@ export function ProfilePage() {
               <div key={session.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={session.counselor.avatar || "/placeholder.svg"} alt={session.counselor.name} />
-                    <AvatarFallback>{session.counselor.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={session.counselorAvatar || "/placeholder.svg"} alt={session.counselorName} />
+                    <AvatarFallback>{session.counselorName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-sm">{session.counselor.name}</p>
+                    <p className="font-medium text-sm">{session.counselorName}</p>
                     <p className="text-xs text-muted-foreground">{session.date}</p>
                   </div>
                 </div>

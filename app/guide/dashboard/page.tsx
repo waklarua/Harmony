@@ -1,5 +1,6 @@
 import { GuideDashboard } from "@/components/guide/guide-dashboard"
 import { getSession } from "@/lib/auth-utils"
+import { getGuideDashboardData } from "@/app/actions/dashboard"
 import { redirect } from "next/navigation"
 
 export const metadata = {
@@ -14,5 +15,18 @@ export default async function GuideDashboardPage() {
     redirect("/login")
   }
 
-  return <GuideDashboard />
+  if (session.user.role !== 'guide') {
+    redirect("/login")
+  }
+
+  const data = await getGuideDashboardData(session.user.id)
+
+  return (
+    <GuideDashboard
+      todaysSessions={data.todaysSessions}
+      activeClients={data.activeClients}
+      bookingRequests={data.bookingRequests}
+      guideName={data.guideName}
+    />
+  )
 }

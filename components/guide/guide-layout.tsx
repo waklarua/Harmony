@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Heart, Home, Users, Calendar, Settings, LogOut, Menu, X, Bell, User, TrendingUp, ChevronLeft, MessageSquare } from "lucide-react"
-import { mockGuide } from "@/lib/mock-data"
+import { authClient } from "@/lib/auth-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
 
@@ -30,8 +30,16 @@ const navigation = [
 
 export function GuideLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { data: session } = authClient.useSession()
+
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,16 +103,15 @@ export function GuideLayout({ children }: { children: React.ReactNode }) {
 
             {/* Logout */}
             <div className="border-t border-border pt-4 mt-auto">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-destructive transition-colors"
-                  title={!sidebarOpen ? "Logout" : undefined}
-                >
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
-                  {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-destructive transition-colors"
+                title={!sidebarOpen ? "Logout" : undefined}
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
+              </Button>
             </div>
           </div>
         </aside>
@@ -156,29 +163,27 @@ export function GuideLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={mockGuide.avatar || "/placeholder.svg"} alt={mockGuide.name} />
-                      <AvatarFallback>{mockGuide.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
                   <div className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={mockGuide.avatar || "/placeholder.svg"} alt={mockGuide.name} />
-                      <AvatarFallback>{mockGuide.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">{mockGuide.name}</span>
-                      <span className="text-xs text-muted-foreground">{mockGuide.email}</span>
+                      <span className="text-sm font-medium">{session?.user?.name || "User"}</span>
+                      <span className="text-xs text-muted-foreground">{session?.user?.email || ""}</span>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/" className="flex items-center gap-2 text-destructive">
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Link>
+                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive cursor-pointer">
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

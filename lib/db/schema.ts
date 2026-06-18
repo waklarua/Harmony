@@ -79,9 +79,13 @@ export const counselorProfile = pgTable(
     bio: text('bio'),
     specializations: text('specializations').array(),
     certifications: text('certifications').array(),
+    yearsOfExperience: integer('years_of_experience'),
+    licenseNumber: text('license_number'),
+    licenseDocumentUrl: text('license_document_url'),
     hourlyRate: decimal('hourlyRate', { precision: 10, scale: 2 }),
     rating: decimal('rating', { precision: 3, scale: 2 }),
     availability: text('availability'),
+    status: text('status').default('pending'),
     createdAt: timestamp('createdAt').defaultNow(),
     updatedAt: timestamp('updatedAt').defaultNow(),
   },
@@ -127,6 +131,7 @@ export const message = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     content: text('content').notNull(),
+    iv: text('iv'),
     attachments: text('attachments').array(),
     isRead: boolean('isRead').default(false),
     createdAt: timestamp('createdAt').defaultNow(),
@@ -151,6 +156,24 @@ export const moodEntry = pgTable(
   },
   (table) => ({
     userIdIdx: index('idx_mood_entry_userId').on(table.userId),
+  })
+)
+
+export const assessmentResult = pgTable(
+  'assessment_result',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    assessmentType: text('assessmentType').notNull(),
+    score: integer('score').notNull(),
+    interpretation: text('interpretation').notNull(),
+    answers: integer('answers').array().notNull(),
+    createdAt: timestamp('createdAt').defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_assessment_userId').on(table.userId),
   })
 )
 
@@ -182,6 +205,39 @@ export const review = pgTable(
   })
 )
 
+export const reviewRelations = relations(review, ({ one }) => ({
+  counselor: one(user, {
+    fields: [review.counselorId],
+    references: [user.id],
+    relationName: 'receivedReviews',
+  }),
+  seeker: one(user, {
+    fields: [review.seekerId],
+    references: [user.id],
+    relationName: 'givenReviews',
+  }),
+}))
+
+export const supportTicket = pgTable(
+  'support_ticket',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    subject: text('subject').notNull(),
+    description: text('description'),
+    status: text('status').default('open'),
+    priority: text('priority').default('medium'),
+    createdAt: timestamp('createdAt').defaultNow(),
+    updatedAt: timestamp('updatedAt').defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_support_ticket_userId').on(table.userId),
+    statusIdx: index('idx_support_ticket_status').on(table.status),
+  })
+)
+
 // Relations
 export const userRelations = relations(user, ({ one, many }) => ({
   counselorProfile: one(counselorProfile, {
@@ -194,6 +250,15 @@ export const userRelations = relations(user, ({ one, many }) => ({
   sentMessages: many(message),
   receivedReviews: many(review, { relationName: 'receivedReviews' }),
   givenReviews: many(review, { relationName: 'givenReviews' }),
+  supportTickets: many(supportTicket),
+  assessments: many(assessmentResult),
+}))
+
+export const supportTicketRelations = relations(supportTicket, ({ one }) => ({
+  user: one(user, {
+    fields: [supportTicket.userId],
+    references: [user.id],
+  }),
 }))
 
 export const bookingRelations = relations(booking, ({ one, many }) => ({
