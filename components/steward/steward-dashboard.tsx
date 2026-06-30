@@ -18,7 +18,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react"
-import { Line, LineChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { Line, LineChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 const sessionTrendData = [
@@ -160,21 +160,19 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
                   }}
                   className="h-[200px] w-full"
                 >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sessionTrendData}>
-                      <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line
-                        type="monotone"
-                        dataKey="sessions"
-                        stroke="var(--color-sessions)"
-                        strokeWidth={2}
-                        dot={{ fill: "var(--color-sessions)", strokeWidth: 0, r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <LineChart data={sessionTrendData}>
+                    <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="sessions"
+                      stroke="var(--color-sessions)"
+                      strokeWidth={2}
+                      dot={{ fill: "var(--color-sessions)", strokeWidth: 0, r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
                 </ChartContainer>
               </CardContent>
             </Card>

@@ -27,6 +27,7 @@ export default async function GuideDashboardPage() {
       activeClients={data.activeClients}
       bookingRequests={data.bookingRequests}
       guideName={data.guideName}
+      earningsData={data.earningsData}
     />
   )
 }

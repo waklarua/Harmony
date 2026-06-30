@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   Flame,
 } from "lucide-react"
-import { ResponsiveContainer, XAxis, YAxis, Area, AreaChart } from "recharts"
+import { XAxis, YAxis, Area, AreaChart } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface Milestone {
@@ -385,36 +385,34 @@ export function JourneyProgress({ variant = "full", completedSessions: completed
               }}
               className="h-[250px] w-full"
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={moodData}>
-                  <defs>
-                    <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                  <YAxis
-                    domain={[1, 5]}
-                    ticks={[1, 2, 3, 4, 5]}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => {
-                      const labels = ["", "Low", "Fair", "Good", "Great", "Excellent"]
-                      return labels[value] || ""
-                    }}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--color-value)"
-                    strokeWidth={2}
-                    fill="url(#moodGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <AreaChart data={moodData}>
+                <defs>
+                  <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <YAxis
+                  domain={[1, 5]}
+                  ticks={[1, 2, 3, 4, 5]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => {
+                    const labels = ["", "Low", "Fair", "Good", "Great", "Excellent"]
+                    return labels[value] || ""
+                  }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--color-value)"
+                  strokeWidth={2}
+                  fill="url(#moodGradient)"
+                />
+              </AreaChart>
             </ChartContainer>
 
             <div className="mt-4 flex items-center justify-center gap-6 text-sm">

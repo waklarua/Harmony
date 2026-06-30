@@ -23,11 +23,10 @@ export default async function Profile() {
     <SeekerLayout>
       <ProfilePage
         userName={data.user.name}
+        userEmail={data.user.email}
         userAvatar={data.user.avatar}
         joinedAt={data.user.joinedAt}
         completedSessionsCount={data.completedSessionsCount}
-        upcomingSessions={data.upcomingSessions}
-        pastSessions={data.pastSessions}
       />
     </SeekerLayout>
   )

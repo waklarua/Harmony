@@ -4,18 +4,22 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ChevronLeft, Lock } from "lucide-react"
+import { ChevronLeft, Lock, FileText, X } from "lucide-react"
 import { sendMessage, getSessionEncryptionKey } from "@/app/actions/booking"
+import { markConversationAsRead } from "@/app/actions/messages"
 import { decryptMessage } from "@/lib/client-encryption"
 import { ChatPanel } from "@/components/session/session-room"
+import { SessionNotesPanel } from "@/components/session/session-notes"
 import Pusher from "pusher-js"
 
 interface SimpleChatRoomProps {
   sessionId: string
+  otherUserId: string
   otherName: string
   otherAvatar?: string | null
   currentUserId: string
   currentUserAvatar?: string | null
+  isCounselor?: boolean
   initialMessages: {
     id: string
     senderId: string
@@ -29,15 +33,18 @@ interface SimpleChatRoomProps {
 
 export function SimpleChatRoom({
   sessionId,
+  otherUserId,
   otherName,
   otherAvatar,
   currentUserId,
   currentUserAvatar,
+  isCounselor = false,
   initialMessages,
 }: SimpleChatRoomProps) {
   const router = useRouter()
   const [messages, setMessages] = useState(initialMessages)
   const [newMessage, setNewMessage] = useState("")
+  const [showNotes, setShowNotes] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const encKeyRef = useRef<string | null>(null)
 
@@ -116,6 +123,11 @@ export function SimpleChatRoom({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Mark messages as read on mount
+  useEffect(() => {
+    markConversationAsRead(otherUserId).catch(() => {})
+  }, [otherUserId])
+
   const formatTimestamp = () => {
     return (
       new Date().toLocaleTimeString("en-US", {
@@ -164,19 +176,43 @@ export function SimpleChatRoom({
             <span>End-to-end encrypted</span>
           </div>
         </div>
+        {isCounselor && (
+          <Button variant="ghost" size="icon" onClick={() => setShowNotes(!showNotes)}>
+            <FileText className="h-4 w-4" />
+            <span className="sr-only">Session notes</span>
+          </Button>
+        )}
       </header>
 
-      {/* Chat */}
-      <div className="flex flex-1 flex-col mx-auto w-full max-w-3xl overflow-hidden">
-        <ChatPanel
-          messages={messages}
-          newMessage={newMessage}
-          setNewMessage={setNewMessage}
-          handleSendMessage={handleSendMessage}
-          messagesEndRef={messagesEndRef}
-          counselorAvatar={otherAvatar}
-          showSessionNotice
-        />
+      {/* Main content */}
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Chat */}
+        <div className="flex flex-1 flex-col mx-auto w-full max-w-3xl overflow-hidden">
+          <ChatPanel
+            messages={messages}
+            systemMessages={[]}
+            newMessage={newMessage}
+            setNewMessage={setNewMessage}
+            handleSendMessage={handleSendMessage}
+            messagesEndRef={messagesEndRef}
+            counselorAvatar={otherAvatar}
+            showSessionNotice
+          />
+        </div>
+
+        {/* Notes Panel — overlays from right, only for counselors */}
+        {isCounselor && showNotes && (
+          <div className="absolute right-0 top-0 bottom-0 w-80 border-l border-border bg-card p-4 shadow-xl z-20 overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-semibold">Session Notes</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowNotes(false)}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close notes</span>
+              </Button>
+            </div>
+            <SessionNotesPanel bookingId={sessionId} />
+          </div>
+        )}
       </div>
     </div>
   )

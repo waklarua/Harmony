@@ -27,10 +27,12 @@ import {
   Bell,
   User,
   BarChart3,
+  BookOpen,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
+import { NotificationBell } from "@/components/notification-bell"
 
 const navigation = [
   { name: "Dashboard", href: "/steward/dashboard", icon: Home },
@@ -38,6 +40,7 @@ const navigation = [
   { name: "Counselors", href: "/steward/counselors", icon: UserCheck },
   { name: "Support", href: "/steward/support", icon: TicketCheck },
   { name: "Analytics", href: "/steward/analytics", icon: BarChart3 },
+  { name: "Resources", href: "/steward/resources", icon: BookOpen },
 ]
 
 export function StewardLayout({ children }: { children: React.ReactNode }) {
@@ -106,13 +109,7 @@ export function StewardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                3
-              </span>
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

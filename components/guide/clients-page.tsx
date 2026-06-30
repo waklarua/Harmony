@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GuideLayout } from "./guide-layout"
-import { Search, Calendar, MessageSquare, FileText, MoreVertical } from "lucide-react"
+import { Search, Calendar, MessageSquare, FileText, MoreVertical, Timer } from "lucide-react"
+import { canJoinSession, getJoinButtonLabel } from "@/lib/session-utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { EmptyState } from "@/components/shared/empty-state"
 import type { GuideClientItem } from "@/app/actions/dashboard"
@@ -23,7 +24,7 @@ export function ClientsPage({ clients }: ClientsPageProps) {
 
   const activeClients = clients.filter((c) => c.status === "active")
   const newClients = clients.filter((c) => c.status === "new")
-  const inactiveClients = clients.filter((c) => c.status === "inactive")
+  const pastClients = clients.filter((c) => c.status === "past")
 
   const filterClients = (list: GuideClientItem[]) => {
     return list.filter(
@@ -91,13 +92,18 @@ export function ClientsPage({ clients }: ClientsPageProps) {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {client.bookingId ? (
+          {client.bookingId && canJoinSession(client.scheduledAt, null, null) ? (
             <Link href={`/session/${client.bookingId}`}>
               <Button size="sm" className="gap-1">
                 <MessageSquare className="h-3 w-3" />
                 Join Session
               </Button>
             </Link>
+          ) : client.bookingId ? (
+            <Button size="sm" className="gap-1" disabled>
+              <Timer className="h-3 w-3" />
+              {getJoinButtonLabel(client.scheduledAt)}
+            </Button>
           ) : (
             <Button size="sm" className="gap-1" disabled>
               <Calendar className="h-3 w-3" />
@@ -152,7 +158,7 @@ export function ClientsPage({ clients }: ClientsPageProps) {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="inactive">Past</TabsTrigger>
+            <TabsTrigger value="past">Past</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active" className="mt-6">
@@ -177,12 +183,12 @@ export function ClientsPage({ clients }: ClientsPageProps) {
             </div>
           </TabsContent>
 
-          <TabsContent value="inactive" className="mt-6">
+          <TabsContent value="past" className="mt-6">
             <div className="grid gap-4">
-              {filterClients(inactiveClients).map((client) => (
+              {filterClients(pastClients).map((client) => (
                 <ClientCard key={client.id} client={client} />
               ))}
-              {filterClients(inactiveClients).length === 0 && (
+              {filterClients(pastClients).length === 0 && (
                 <EmptyState variant={searchQuery ? "no-search-results" : "no-past-clients"} searchQuery={searchQuery} />
               )}
             </div>

@@ -107,9 +107,14 @@ export const booking = pgTable(
     sessionType: text('sessionType').notNull(),
     status: text('status').default('pending'),
     scheduledAt: timestamp('scheduledAt').notNull(),
+    startedAt: timestamp('startedAt'),
     duration: integer('duration'),
     notes: text('notes'),
     amount: decimal('amount', { precision: 10, scale: 2 }),
+    paymentStatus: text('paymentStatus').default('pending'),
+    paymentReference: text('paymentReference'),
+    paymentMethod: text('paymentMethod'),
+    videoRoomUrl: text('videoRoomUrl'),
     createdAt: timestamp('createdAt').defaultNow(),
     updatedAt: timestamp('updatedAt').defaultNow(),
   },
@@ -177,11 +182,50 @@ export const assessmentResult = pgTable(
   })
 )
 
+export const notification = pgTable(
+  'notification',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    message: text('message').notNull(),
+    type: text('type').notNull().default('system'),
+    isRead: boolean('isRead').notNull().default(false),
+    createdAt: timestamp('createdAt').defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_notification_userId').on(table.userId),
+  })
+)
+
+export const sessionNote = pgTable(
+  'session_note',
+  {
+    id: text('id').primaryKey(),
+    bookingId: text('bookingId')
+      .notNull()
+      .unique()
+      .references(() => booking.id, { onDelete: 'cascade' }),
+    counselorId: text('counselorId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    encryptedContent: text('encryptedContent').notNull(),
+    iv: text('iv').notNull(),
+    createdAt: timestamp('createdAt').defaultNow(),
+    updatedAt: timestamp('updatedAt').defaultNow(),
+  },
+  (table) => ({
+    bookingIdUnique: uniqueIndex('idx_session_note_bookingId').on(table.bookingId),
+  })
+)
+
 export const resource = pgTable('resource', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description'),
   category: text('category'),
+  body: text('body'),
   url: text('url'),
   createdAt: timestamp('createdAt').defaultNow(),
 })
@@ -218,6 +262,24 @@ export const reviewRelations = relations(review, ({ one }) => ({
   }),
 }))
 
+export const scheduleSlot = pgTable(
+  'schedule_slot',
+  {
+    id: text('id').primaryKey(),
+    counselorId: text('counselorId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    dayOfWeek: integer('dayOfWeek').notNull(),
+    startTime: text('startTime').notNull(),
+    endTime: text('endTime').notNull(),
+    createdAt: timestamp('createdAt').defaultNow(),
+    updatedAt: timestamp('updatedAt').defaultNow(),
+  },
+  (table) => ({
+    counselorIdIdx: index('idx_schedule_slot_counselorId').on(table.counselorId),
+  })
+)
+
 export const supportTicket = pgTable(
   'support_ticket',
   {
@@ -252,12 +314,105 @@ export const userRelations = relations(user, ({ one, many }) => ({
   givenReviews: many(review, { relationName: 'givenReviews' }),
   supportTickets: many(supportTicket),
   assessments: many(assessmentResult),
+  notifications: many(notification),
+  sessionNotes: many(sessionNote),
+  scheduleSlots: many(scheduleSlot),
+  earningsAsCounselor: many(earnings, { relationName: 'earningsAsCounselor' }),
+  waitlistEntriesAsSeeker: many(waitlistEntry, { relationName: 'waitlistSeeker' }),
+  waitlistEntriesAsCounselor: many(waitlistEntry, { relationName: 'waitlistCounselor' }),
+}))
+
+export const notificationRelations = relations(notification, ({ one }) => ({
+  user: one(user, {
+    fields: [notification.userId],
+    references: [user.id],
+  }),
+}))
+
+export const sessionNoteRelations = relations(sessionNote, ({ one }) => ({
+  booking: one(booking, {
+    fields: [sessionNote.bookingId],
+    references: [booking.id],
+  }),
+  counselor: one(user, {
+    fields: [sessionNote.counselorId],
+    references: [user.id],
+  }),
 }))
 
 export const supportTicketRelations = relations(supportTicket, ({ one }) => ({
   user: one(user, {
     fields: [supportTicket.userId],
     references: [user.id],
+  }),
+}))
+
+export const scheduleSlotRelations = relations(scheduleSlot, ({ one }) => ({
+  counselor: one(user, {
+    fields: [scheduleSlot.counselorId],
+    references: [user.id],
+  }),
+}))
+
+export const waitlistEntry = pgTable(
+  'waitlist_entry',
+  {
+    id: text('id').primaryKey(),
+    seekerId: text('seekerId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    counselorId: text('counselorId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt').defaultNow(),
+  },
+  (table) => ({
+    seekerCounselorUnique: uniqueIndex('idx_waitlist_seeker_counselor').on(table.seekerId, table.counselorId),
+    counselorIdIdx: index('idx_waitlist_counselorId').on(table.counselorId),
+  })
+)
+
+export const waitlistEntryRelations = relations(waitlistEntry, ({ one }) => ({
+  seeker: one(user, {
+    fields: [waitlistEntry.seekerId],
+    references: [user.id],
+    relationName: 'waitlistSeeker',
+  }),
+  counselor: one(user, {
+    fields: [waitlistEntry.counselorId],
+    references: [user.id],
+    relationName: 'waitlistCounselor',
+  }),
+}))
+
+export const earnings = pgTable(
+  'earnings',
+  {
+    id: text('id').primaryKey(),
+    counselorId: text('counselorId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    bookingId: text('bookingId')
+      .notNull()
+      .references(() => booking.id, { onDelete: 'cascade' }),
+    amount: integer('amount').notNull().default(1500),
+    createdAt: timestamp('createdAt').defaultNow(),
+  },
+  (table) => ({
+    counselorIdIdx: index('idx_earnings_counselorId').on(table.counselorId),
+    bookingIdIdx: index('idx_earnings_bookingId').on(table.bookingId),
+  })
+)
+
+export const earningsRelations = relations(earnings, ({ one }) => ({
+  counselor: one(user, {
+    fields: [earnings.counselorId],
+    references: [user.id],
+    relationName: 'earningsAsCounselor',
+  }),
+  booking: one(booking, {
+    fields: [earnings.bookingId],
+    references: [booking.id],
   }),
 }))
 
@@ -273,4 +428,8 @@ export const bookingRelations = relations(booking, ({ one, many }) => ({
     relationName: 'counselorBookings',
   }),
   messages: many(message),
+  sessionNote: one(sessionNote, {
+    fields: [booking.id],
+    references: [sessionNote.bookingId],
+  }),
 }))

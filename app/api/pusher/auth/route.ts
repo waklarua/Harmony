@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing socket_id or channel_name' }, { status: 400 })
     }
 
-    // Extract bookingId from channel name: private-session-{bookingId}
-    const match = channelName.match(/^private-session-(.+)$/)
+    // Extract bookingId from channel name: private-session-{bookingId} or presence-session-{bookingId}
+    const match = channelName.match(/^(private|presence)-session-(.+)$/)
     if (!match) {
       return NextResponse.json({ error: 'Invalid channel' }, { status: 400 })
     }
-    const bookingId = match[1]
+    const [, channelType, bookingId] = match
 
     // Verify user is part of this booking
     const [bk] = await db
@@ -38,7 +38,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const authResponse = pusher.authorizeChannel(socketId, channelName)
+    const userData = {
+      user_id: session.user.id,
+      user_info: {
+        name: session.user.name || 'Unknown',
+        avatar: session.user.image || '',
+      },
+    }
+
+    let authResponse: { auth: string; channel_data?: string }
+    if (channelType === 'presence') {
+      authResponse = pusher.authorizeChannel(socketId, channelName, userData)
+    } else {
+      authResponse = pusher.authorizeChannel(socketId, channelName)
+    }
+
     return NextResponse.json(authResponse)
   } catch (err) {
     console.error('[pusher/auth]', err)

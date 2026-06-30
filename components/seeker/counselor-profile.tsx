@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,9 @@ import {
 } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
 import { createBooking } from "@/app/actions/booking"
+import { PaymentModal } from "./payment-modal"
+import { getAvailableTimeSlots } from "@/app/actions/availability"
+import { getMyWaitlistStatus, joinWaitlist, leaveWaitlist } from "@/app/actions/waitlist"
 import type { CounselorProfileData } from "@/app/actions/dashboard"
 
 interface CounselorProfileProps {
@@ -35,7 +38,7 @@ function getNextWeekDates() {
   const today = new Date()
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 0; i < 7; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() + i)
     dates.push({
@@ -53,41 +56,126 @@ interface TimeSlot {
   value: string
 }
 
-const timeSlots: TimeSlot[] = [
-  { label: "9:00 AM", value: "09:00" },
-  { label: "10:00 AM", value: "10:00" },
-  { label: "11:00 AM", value: "11:00" },
-  { label: "2:00 PM", value: "14:00" },
-  { label: "3:00 PM", value: "15:00" },
-  { label: "4:00 PM", value: "16:00" },
-]
-
 export function CounselorProfile({ counselor }: CounselorProfileProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<{ full: string; iso: string } | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [isBooking, setIsBooking] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [isFullyBooked, setIsFullyBooked] = useState<boolean | null>(null)
+  const [waitlistStatus, setWaitlistStatus] = useState<{ onWaitlist: boolean; position: number | null }>({
+    onWaitlist: false,
+    position: null,
+  })
+  const [waitlistLoading, setWaitlistLoading] = useState(true)
+  const [showPayment, setShowPayment] = useState(false)
+  const [pendingBooking, setPendingBooking] = useState<{
+    date: string
+    time: string
+    timeValue: string
+  } | null>(null)
 
   const availableDates = getNextWeekDates()
 
-  const handleBook = async () => {
+  useEffect(() => {
+    setWaitlistLoading(true)
+    const today = new Date()
+    const checks = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today)
+      d.setDate(d.getDate() + i)
+      return getAvailableTimeSlots(counselor.id, d.toISOString().split('T')[0])
+    })
+    Promise.all([
+      Promise.all(checks).then((results) => results.every((slots) => slots.length === 0)),
+      getMyWaitlistStatus(counselor.id).catch(() => ({ onWaitlist: false, position: null })),
+    ])
+      .then(([fullyBooked, wlStatus]) => {
+        setIsFullyBooked(fullyBooked)
+        setWaitlistStatus(wlStatus)
+      })
+      .catch(() => setIsFullyBooked(false))
+      .finally(() => setWaitlistLoading(false))
+  }, [counselor.id])
+
+  useEffect(() => {
+    if (isFullyBooked) return
+    if (!selectedDate) {
+      setAvailableSlots([])
+      setSelectedTime(null)
+      return
+    }
+    setSlotsLoading(true)
+    setSelectedTime(null)
+    getAvailableTimeSlots(counselor.id, selectedDate.iso)
+      .then(setAvailableSlots)
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setSlotsLoading(false))
+  }, [selectedDate, counselor.id, isFullyBooked])
+
+  const handleBook = () => {
     if (!selectedDate || !selectedTime) return
+    const time = availableSlots.find((t) => t.label === selectedTime)
+    if (!time) return
+    const [h, m] = time.value.split(':').map(Number)
+    const utcH = (h - 3 + 24) % 24
+    const utcVal = `${utcH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+    setPendingBooking({
+      date: selectedDate.full,
+      time: selectedTime,
+      timeValue: `${selectedDate.iso}T${utcVal}:00.000Z`,
+    })
+    setShowPayment(true)
+  }
+
+  const handlePaymentConfirm = async (method: string, reference: string) => {
+    if (!pendingBooking || !selectedDate) return
     setIsBooking(true)
     setBookingError(null)
     try {
-      const time = timeSlots.find((t) => t.label === selectedTime)
-      if (!time) throw new Error("Invalid time selected")
       await createBooking({
         counselorId: counselor.id,
         sessionType: "video",
-        scheduledAt: `${selectedDate.iso}T${time.value}:00.000Z`,
+        scheduledAt: pendingBooking.timeValue,
+        amount: 1500,
+        paymentStatus: "paid",
+        paymentReference: reference,
+        paymentMethod: method,
       })
+      setShowPayment(false)
       router.push("/seeker/dashboard")
       router.refresh()
     } catch (err: any) {
       setBookingError(err?.message || "Failed to book session. Please try again.")
       setIsBooking(false)
+    }
+  }
+
+  const handleJoinWaitlist = async () => {
+    setWaitlistLoading(true)
+    setBookingError(null)
+    try {
+      await joinWaitlist(counselor.id)
+      const wlStatus = await getMyWaitlistStatus(counselor.id)
+      setWaitlistStatus(wlStatus)
+    } catch (err: any) {
+      setBookingError(err?.message || 'Failed to join waitlist')
+    } finally {
+      setWaitlistLoading(false)
+    }
+  }
+
+  const handleLeaveWaitlist = async () => {
+    setWaitlistLoading(true)
+    setBookingError(null)
+    try {
+      await leaveWaitlist(counselor.id)
+      setWaitlistStatus({ onWaitlist: false, position: null })
+    } catch (err: any) {
+      setBookingError(err?.message || 'Failed to leave waitlist')
+    } finally {
+      setWaitlistLoading(false)
     }
   }
 
@@ -229,76 +317,147 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Date Selection */}
-                <div>
-                  <label className="text-sm font-medium">Select a Date</label>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    {availableDates.map((d) => (
-                      <button
-                        key={d.iso}
-                        onClick={() => setSelectedDate(d)}
-                        className={`flex flex-col items-center rounded-lg border-2 p-2 transition-colors ${
-                          selectedDate?.iso === d.iso
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <span className="text-xs text-muted-foreground">{d.day}</span>
-                        <span className="text-lg font-semibold">{d.date}</span>
-                      </button>
-                    ))}
+                {waitlistLoading && isFullyBooked === null ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                </div>
-
-                {/* Time Selection */}
-                {selectedDate && (
-                  <div>
-                    <label className="text-sm font-medium">Select a Time (EAT)</label>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {timeSlots.map((time) => (
-                        <button
-                          key={time.value}
-                          onClick={() => setSelectedTime(time.label)}
-                          className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-colors ${
-                            selectedTime === time.label
-                              ? "border-primary bg-primary/10"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {time.label}
-                        </button>
-                      ))}
+                ) : isFullyBooked ? (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-muted bg-muted/30 p-4 text-center">
+                      <Calendar className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        This counselor is fully booked for the next 7 days.
+                      </p>
                     </div>
+
+                    {bookingError && (
+                      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                        <p className="text-sm text-destructive">{bookingError}</p>
+                      </div>
+                    )}
+
+                    {waitlistStatus.onWaitlist ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-center">
+                          <p className="text-sm font-medium">You're on the waitlist</p>
+                          {waitlistStatus.position && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              #{waitlistStatus.position} in line
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          className="w-full"
+                          variant="outline"
+                          size="lg"
+                          disabled={waitlistLoading}
+                          onClick={handleLeaveWaitlist}
+                        >
+                          {waitlistLoading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Leave Waitlist
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        disabled={waitlistLoading}
+                        onClick={handleJoinWaitlist}
+                      >
+                        {waitlistLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        Join Waitlist
+                      </Button>
+                    )}
                   </div>
+                ) : (
+                  <>
+                    {/* Date Selection */}
+                    <div>
+                      <label className="text-sm font-medium">Select a Date</label>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {availableDates.map((d) => (
+                          <button
+                            key={d.iso}
+                            onClick={() => setSelectedDate(d)}
+                            className={`flex flex-col items-center rounded-lg border-2 p-2 transition-colors ${
+                              selectedDate?.iso === d.iso
+                                ? "border-primary bg-primary/10"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <span className="text-xs text-muted-foreground">{d.day}</span>
+                            <span className="text-lg font-semibold">{d.date}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Time Selection */}
+                    {selectedDate && (
+                      <div>
+                        <label className="text-sm font-medium">Select a Time (EAT)</label>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {slotsLoading ? (
+                            <div className="col-span-2 flex items-center justify-center py-4 text-sm text-muted-foreground">
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading times...
+                            </div>
+                          ) : availableSlots.length === 0 ? (
+                            <p className="col-span-2 py-2 text-sm text-muted-foreground">
+                              No available times for this date. Try another day.
+                            </p>
+                          ) : (
+                            availableSlots.map((time) => (
+                              <button
+                                key={time.value}
+                                onClick={() => setSelectedTime(time.label)}
+                                className={`flex items-center justify-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition-colors ${
+                                  selectedTime === time.label
+                                    ? "border-primary bg-primary/10"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <Clock className="h-3 w-3" />
+                                {time.label}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {bookingError && (
+                      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+                        <p className="text-sm text-destructive">{bookingError}</p>
+                      </div>
+                    )}
+
+                    {/* Book Button */}
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      disabled={!selectedDate || !selectedTime || isBooking}
+                      onClick={handleBook}
+                    >
+                      {isBooking ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Booking...
+                        </>
+                      ) : selectedDate && selectedTime ? (
+                        `Book ${selectedDate.full} at ${selectedTime}`
+                      ) : (
+                        "Select date and time"
+                      )}
+                    </Button>
+
+                    <p className="text-center text-xs text-muted-foreground">Free cancellation up to 24 hours before</p>
+                  </>
                 )}
-
-                {bookingError && (
-                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-                    <p className="text-sm text-destructive">{bookingError}</p>
-                  </div>
-                )}
-
-                {/* Book Button */}
-                <Button
-                  className="w-full"
-                  size="lg"
-                  disabled={!selectedDate || !selectedTime || isBooking}
-                  onClick={handleBook}
-                >
-                  {isBooking ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Booking...
-                    </>
-                  ) : selectedDate && selectedTime ? (
-                    `Book ${selectedDate.full} at ${selectedTime}`
-                  ) : (
-                    "Select date and time"
-                  )}
-                </Button>
-
-                <p className="text-center text-xs text-muted-foreground">Free cancellation up to 24 hours before</p>
               </CardContent>
             </Card>
 
@@ -316,6 +475,16 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
           </div>
         </div>
       </div>
+
+      <PaymentModal
+        open={showPayment}
+        onOpenChange={setShowPayment}
+        amount={1500}
+        counselorName={counselor.name}
+        sessionDate={pendingBooking?.date || ""}
+        sessionTime={pendingBooking?.time || ""}
+        onConfirm={handlePaymentConfirm}
+      />
     </SeekerLayout>
   )
 }

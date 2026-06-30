@@ -15,6 +15,48 @@
       "when": 1781733390710,
       "tag": "0001_absurd_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782064651464,
+      "tag": "0002_sleepy_nicolaos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782162549530,
+      "tag": "0003_lethal_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782169815623,
+      "tag": "0004_clumsy_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782223247585,
+      "tag": "0005_brave_earnings",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782469754954,
+      "tag": "0006_lumpy_junta",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782472968141,
+      "tag": "0007_sweet_eternals",
+      "breakpoints": true
     }
   ]
 }

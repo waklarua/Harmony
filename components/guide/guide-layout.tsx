@@ -14,17 +14,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Heart, Home, Users, Calendar, Settings, LogOut, Menu, X, Bell, User, TrendingUp, ChevronLeft, MessageSquare } from "lucide-react"
+import { Heart, Home, Users, Calendar, Settings, LogOut, Menu, X, Bell, User, TrendingUp, ChevronLeft, MessageSquare, FileText } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
+import { NotificationBell } from "@/components/notification-bell"
 
 const navigation = [
   { name: "Dashboard", href: "/guide/dashboard", icon: Home },
   { name: "My Clients", href: "/guide/clients", icon: Users },
   { name: "Messages", href: "/guide/messages", icon: MessageSquare },
   { name: "Schedule", href: "/guide/schedule", icon: Calendar },
+  { name: "History", href: "/guide/history", icon: FileText },
   { name: "Earnings", href: "/guide/earnings", icon: TrendingUp },
+  { name: "Profile", href: "/guide/profile", icon: User },
   { name: "Settings", href: "/guide/settings", icon: Settings },
 ]
 
@@ -153,11 +156,7 @@ export function GuideLayout({ children }: { children: React.ReactNode }) {
 
               <ThemeToggle />
 
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

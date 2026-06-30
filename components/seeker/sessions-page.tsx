@@ -7,14 +7,18 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SeekerLayout } from "./seeker-layout"
-import { Calendar, Clock, Video, MessageSquare, Phone, ArrowRight } from "lucide-react"
-import { mockSessions } from "@/lib/mock-data"
+import { Calendar, Clock, Video, MessageSquare, Phone, ArrowRight, Timer, CheckCircle2 } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
+import { canJoinSession, getJoinButtonLabel } from "@/lib/session-utils"
+import type { SeekerSession } from "@/app/actions/dashboard"
 
-export function SessionsPage() {
-  const upcomingSessions = mockSessions.filter((s) => s.status === "upcoming")
-  const completedSessions = mockSessions.filter((s) => s.status === "completed")
+interface SessionsPageProps {
+  upcoming: SeekerSession[]
+  active: SeekerSession[]
+  past: SeekerSession[]
+}
 
+export function SessionsPage({ upcoming, active, past }: SessionsPageProps) {
   const getSessionTypeIcon = (type: string) => {
     switch (type) {
       case "video":
@@ -47,19 +51,34 @@ export function SessionsPage() {
           <TabsList>
             <TabsTrigger value="upcoming" className="gap-2">
               Upcoming
-              {upcomingSessions.length > 0 && (
+              {upcoming.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {upcomingSessions.length}
+                  {upcoming.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="active">
+              Active
+              {active.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {active.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="past">
+              Past
+              {past.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {past.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="upcoming" className="mt-6">
-            {upcomingSessions.length > 0 ? (
+            {upcoming.length > 0 ? (
               <div className="space-y-4">
-                {upcomingSessions.map((session) => (
+                {upcoming.map((session) => (
                   <Card key={session.id}>
                     <CardContent className="p-6">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -76,7 +95,7 @@ export function SessionsPage() {
                             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(session.date).toLocaleDateString("en-US", {
+                                {new Date(session.date + 'T12:00:00Z').toLocaleDateString("en-US", {
                                   weekday: "short",
                                   month: "short",
                                   day: "numeric",
@@ -90,17 +109,33 @@ export function SessionsPage() {
                                 {getSessionTypeIcon(session.type)}
                                 {session.type}
                               </Badge>
+                              <Badge variant={session.status === 'confirmed' ? 'default' : 'secondary'} className="text-xs capitalize">
+                                {session.status === 'in_progress' ? 'In Progress' : session.status}
+                              </Badge>
+                              {session.paymentStatus === 'paid' && (
+                                <Badge variant="outline" className="gap-1 border-green-500/30 bg-green-500/10 text-green-600 text-xs">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Paid
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/session/${session.id}`}>
-                            <Button className="gap-1">
-                              Join Session
-                              <ArrowRight className="h-4 w-4" />
+                          {canJoinSession(session.scheduledAt, session.duration, session.status) ? (
+                            <Link href={`/session/${session.id}`}>
+                              <Button className="gap-1">
+                                Join Session
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          ) : (
+                            <Button className="gap-1" disabled>
+                              <Timer className="h-3.5 w-3.5" />
+                              {getJoinButtonLabel(session.scheduledAt, session.duration)}
                             </Button>
-                          </Link>
-                          <Button variant="outline">Reschedule</Button>
+                          )}
+
                         </div>
                       </div>
                     </CardContent>
@@ -112,10 +147,10 @@ export function SessionsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="completed" className="mt-6">
-            {completedSessions.length > 0 ? (
+          <TabsContent value="active" className="mt-6">
+            {active.length > 0 ? (
               <div className="space-y-4">
-                {completedSessions.map((session) => (
+                {active.map((session) => (
                   <Card key={session.id}>
                     <CardContent className="p-6">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -132,7 +167,7 @@ export function SessionsPage() {
                             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(session.date).toLocaleDateString("en-US", {
+                                {new Date(session.date + 'T12:00:00Z').toLocaleDateString("en-US", {
                                   weekday: "short",
                                   month: "short",
                                   day: "numeric",
@@ -141,7 +176,7 @@ export function SessionsPage() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                {session.duration} min
+                                {session.time}
                               </span>
                             </div>
                             {session.notes && (
@@ -152,14 +187,81 @@ export function SessionsPage() {
                             )}
                           </div>
                         </div>
-                        <Badge variant="outline">Completed</Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={session.status === 'in_progress' ? 'default' : 'outline'}>
+                            {session.status === 'in_progress' ? 'In Progress' : 'Active'}
+                          </Badge>
+                          {session.paymentStatus === 'paid' && (
+                            <Badge variant="outline" className="gap-1 border-green-500/30 bg-green-500/10 text-green-600 text-xs">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Paid
+                            </Badge>
+                          )}
+                          <Link href={`/session/${session.id}`}>
+                            <Button size="sm" className="gap-1">
+                              Join Session
+                              <ArrowRight className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : (
-              <EmptyState variant="no-completed-sessions" />
+              <EmptyState variant="no-completed-sessions" title="No active sessions" description="Sessions in progress will appear here." />
+            )}
+          </TabsContent>
+
+          <TabsContent value="past" className="mt-6">
+            {past.length > 0 ? (
+              <div className="space-y-4">
+                {past.map((session) => (
+                  <Card key={session.id}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage
+                              src={session.counselorAvatar || "/placeholder.svg"}
+                              alt={session.counselorName}
+                            />
+                            <AvatarFallback>{session.counselorName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{session.counselorName}</p>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(session.date + 'T12:00:00Z').toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {session.time}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="capitalize">{session.status}</Badge>
+                        {session.paymentStatus === 'paid' && (
+                          <Badge variant="outline" className="gap-1 border-green-500/30 bg-green-500/10 text-green-600 text-xs">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Paid
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <EmptyState variant="no-completed-sessions" title="No past sessions" description="Cancelled or missed sessions will appear here." />
             )}
           </TabsContent>
         </Tabs>

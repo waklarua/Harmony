@@ -2,45 +2,57 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { GuideLayout } from "./guide-layout"
-import { TrendingUp, Calendar, ArrowUpRight, Download } from "lucide-react"
+import { TrendingUp, Calendar } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
-const monthlyData = [
-  { month: "Jul", amount: 102600 },
-  { month: "Aug", amount: 125400 },
-  { month: "Sep", amount: 136800 },
-  { month: "Oct", amount: 148200 },
-  { month: "Nov", amount: 159600 },
-  { month: "Dec", amount: 182400 },
-]
+interface EarningsData {
+  total: number
+  thisMonth: number
+  entries: Array<{
+    id: string
+    bookingId: string
+    amount: number
+    createdAt: string
+  }>
+}
 
-const recentPayouts = [
-  { id: "1", date: "Dec 15, 2024", amount: 91200, sessions: 12, status: "completed" },
-  { id: "2", date: "Dec 1, 2024", amount: 79800, sessions: 11, status: "completed" },
-  { id: "3", date: "Nov 15, 2024", amount: 85500, sessions: 12, status: "completed" },
-]
+interface EarningsPageProps {
+  earningsData: EarningsData
+}
 
-export function EarningsPage() {
+export function EarningsPage({ earningsData }: EarningsPageProps) {
+  const entries = earningsData.entries
+
+  const monthlyMap = new Map<string, number>()
+  for (const e of entries) {
+    const d = new Date(e.createdAt)
+    const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    monthlyMap.set(key, (monthlyMap.get(key) || 0) + e.amount)
+  }
+  const monthlyData = Array.from(monthlyMap.entries())
+    .map(([month, amount]) => ({ month, amount }))
+    .slice(-6)
+
+  const sessionCount = entries.length
+
+  const yearStart = new Date(new Date().getFullYear(), 0, 1)
+  const ytd = entries
+    .filter((e) => new Date(e.createdAt) >= yearStart)
+    .reduce((sum, e) => sum + e.amount, 0)
+
   return (
     <GuideLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Earnings</h1>
-            <p className="mt-1 text-muted-foreground">Track your income and payout history</p>
-          </div>
-          <Button variant="outline" className="gap-2 bg-transparent">
-            <Download className="h-4 w-4" />
-            Export Report
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Earnings</h1>
+          <p className="mt-1 text-muted-foreground">Track your income and payout history</p>
         </div>
 
-        {/* Stats Grid - All values updated to ETB */}
+        {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="flex items-center gap-4 p-6">
@@ -48,22 +60,8 @@ export function EarningsPage() {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(182400)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(earningsData.thisMonth)}</p>
                 <p className="text-sm text-muted-foreground">This Month</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                <ArrowUpRight className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold">+14%</p>
-                  <ArrowUpRight className="h-4 w-4 text-accent" />
-                </div>
-                <p className="text-sm text-muted-foreground">vs Last Month</p>
               </div>
             </CardContent>
           </Card>
@@ -73,8 +71,8 @@ export function EarningsPage() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">24</p>
-                <p className="text-sm text-muted-foreground">Sessions This Month</p>
+                <p className="text-2xl font-bold">{sessionCount}</p>
+                <p className="text-sm text-muted-foreground">Total Bookings</p>
               </div>
             </CardContent>
           </Card>
@@ -84,7 +82,18 @@ export function EarningsPage() {
                 <TrendingUp className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(923400)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(earningsData.total)}</p>
+                <p className="text-sm text-muted-foreground">All Time</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
+                <TrendingUp className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{formatCurrency(ytd)}</p>
                 <p className="text-sm text-muted-foreground">Year to Date</p>
               </div>
             </CardContent>
@@ -96,19 +105,19 @@ export function EarningsPage() {
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Earnings Overview</CardTitle>
-              <CardDescription>Your monthly earnings for the past 6 months (ETB)</CardDescription>
+              <CardDescription>Your monthly earnings history (ETB)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  amount: {
-                    label: "Earnings (ETB)",
-                    color: "var(--primary)",
-                  },
-                }}
-                className="h-[300px] w-full"
-              >
-                <ResponsiveContainer width="100%" height="100%">
+              {monthlyData.length > 0 ? (
+                <ChartContainer
+                  config={{
+                    amount: {
+                      label: "Earnings (ETB)",
+                      color: "var(--primary)",
+                    },
+                  }}
+                  className="h-[300px] w-full"
+                >
                   <BarChart data={monthlyData}>
                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                     <YAxis
@@ -128,68 +137,73 @@ export function EarningsPage() {
                     />
                     <Bar dataKey="amount" fill="var(--color-amount)" radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+                </ChartContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  No earnings data yet
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Payout Schedule - Updated to ETB */}
+          {/* Summary Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Next Payout</CardTitle>
+              <CardTitle className="text-lg">Summary</CardTitle>
+              <CardDescription>Earnings breakdown</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <p className="text-3xl font-bold text-primary">{formatCurrency(91200)}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Scheduled for Jan 1, 2025</p>
-                <div className="mt-3 flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">12 sessions completed</span>
-                </div>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(earningsData.thisMonth)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Earned this month</p>
               </div>
-              <div className="mt-4 space-y-2 text-sm">
+              <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Session Rate</span>
-                  <span className="font-medium">{formatCurrency(6840)}/session</span>
+                  <span className="text-muted-foreground">Per Booking</span>
+                  <span className="font-medium">{formatCurrency(1500)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Platform Fee</span>
-                  <span className="font-medium">15%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Net Rate</span>
-                  <span className="font-medium">{formatCurrency(5814)}/session</span>
+                  <span className="text-muted-foreground">Total Bookings</span>
+                  <span className="font-medium">{sessionCount}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Payout History - Updated to ETB */}
+        {/* Earnings History */}
         <Card>
           <CardHeader>
-            <CardTitle>Payout History</CardTitle>
-            <CardDescription>Your recent payouts and transactions</CardDescription>
+            <CardTitle>Earnings History</CardTitle>
+            <CardDescription>All your earnings from confirmed bookings</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentPayouts.map((payout) => (
-                <div
-                  key={payout.id}
-                  className="flex flex-col gap-2 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{formatCurrency(payout.amount)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {payout.date} • {payout.sessions} sessions
-                    </p>
+            {entries.length > 0 ? (
+              <div className="space-y-4">
+                {entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-2 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">{formatCurrency(entry.amount)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="w-fit">Booking confirmed</Badge>
                   </div>
-                  <Badge variant="outline" className="w-fit capitalize">
-                    {payout.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8 text-center">
+                <p className="text-muted-foreground">No earnings yet. Accept a booking request to get started.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

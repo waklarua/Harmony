@@ -6,36 +6,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { SeekerLayout } from "./seeker-layout"
-import { Calendar, Clock, ArrowRight, Video, MessageSquare, TrendingUp, BookOpen, Search, Sparkles, User, ClipboardList } from "lucide-react"
+import { Calendar, Clock, ArrowRight, Video, MessageSquare, TrendingUp, BookOpen, Search, Sparkles, User, ClipboardList, Timer } from "lucide-react"
+import { canJoinSession, getJoinButtonLabel } from "@/lib/session-utils"
 import { Line, LineChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { CrisisBanner } from "@/components/shared/crisis-banner"
 import { EmptyState } from "@/components/shared/empty-state"
-import { JourneyProgress } from "@/components/seeker/journey-progress"
+import type { CounselorListItem, ActivityItem } from "@/app/actions/dashboard"
+
+interface SessionCard {
+  id: string
+  counselorId: string
+  counselorName: string
+  counselorAvatar: string | null
+  counselorSpecialty: string
+  date: string
+  time: string
+  scheduledAt: string
+  duration: number | null
+  status: string
+  notes: string | null
+}
 
 interface SeekerDashboardProps {
-  upcomingSessions: Array<{
-    id: string
-    counselorId: string
-    counselorName: string
-    counselorAvatar: string | null
-    counselorSpecialty: string
-    date: string
-    time: string
-    status: string
-    notes: string | null
-  }>
-  completedSessions: Array<{
-    id: string
-    counselorId: string
-    counselorName: string
-    counselorAvatar: string | null
-    date: string
-    time: string
-    status: string
-    notes: string | null
-  }>
+  upcomingSessions: SessionCard[]
+  completedSessions: SessionCard[]
   moodData: Array<{ date: string; value: number; note?: string | null }>
+  activityItems: ActivityItem[]
+  recommendedCounselors: CounselorListItem[]
   userName: string
   joinedAt: string
   latestAssessment: {
@@ -45,8 +43,7 @@ interface SeekerDashboardProps {
   } | null
 }
 
-export function SeekerDashboard({ upcomingSessions, completedSessions, moodData, userName, joinedAt, latestAssessment }: SeekerDashboardProps) {
-
+export function SeekerDashboard({ upcomingSessions, completedSessions, moodData, activityItems, recommendedCounselors, userName, joinedAt, latestAssessment }: SeekerDashboardProps) {
   return (
     <SeekerLayout>
       <div className="space-y-8">
@@ -170,10 +167,17 @@ export function SeekerDashboard({ upcomingSessions, completedSessions, moodData,
                             </div>
                           </div>
                           <div className="flex gap-2 sm:flex-col">
-                            <Link href={`/session/${session.id}`} className="flex-1 sm:flex-none">
-                              <Button className="w-full">Join Session</Button>
-                            </Link>
-                            <Button variant="outline" className="flex-1 sm:flex-none bg-transparent">
+                            {canJoinSession(session.scheduledAt, session.duration, session.status) ? (
+                              <Link href={`/session/${session.id}`} className="flex-1 sm:flex-none">
+                                <Button className="w-full">Join Session</Button>
+                              </Link>
+                            ) : (
+                              <Button className="w-full" disabled>
+                                <Timer className="mr-1.5 h-3.5 w-3.5" />
+                                {getJoinButtonLabel(session.scheduledAt, session.duration)}
+                              </Button>
+                            )}
+                            <Button variant="outline" className="flex-1 sm:flex-none bg-transparent" disabled>
                               Reschedule
                             </Button>
                           </div>
@@ -183,21 +187,13 @@ export function SeekerDashboard({ upcomingSessions, completedSessions, moodData,
                   ))}
               </div>
             ) : (
-              <EmptyState variant="no-upcoming-sessions" />
+              <EmptyState variant="no-upcoming-sessions" counselors={recommendedCounselors} />
             )}
 
             {/* Recent Sessions */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Recent Sessions</CardTitle>
-                  <Link href="/seeker/sessions">
-                    <Button variant="ghost" size="sm" className="gap-1">
-                      View All
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
+                <CardTitle>Recent Sessions</CardTitle>
               </CardHeader>
               <CardContent>
                 {completedSessions.length > 0 ? (
@@ -257,24 +253,27 @@ export function SeekerDashboard({ upcomingSessions, completedSessions, moodData,
                 <CardTitle className="text-lg">Recent Activity</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { icon: "✓", text: "Session completed 2 hours ago", time: "" },
-                  { icon: "💬", text: "New message 5 hours ago", time: "" },
-                  { icon: "💬", text: "New message 5 hours ago", time: "" },
-                  { icon: "📅", text: "Session rescheduled 1 day ago", time: "" },
-                ].map((activity, i) => (
-                  <div key={i} className="flex items-start gap-3 pb-3 border-b border-border last:border-b-0">
-                    <span className="text-lg">{activity.icon}</span>
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">{activity.text}</p>
+                {activityItems.length > 0 ? (
+                  activityItems.slice(0, 6).map((activity, i) => (
+                    <div key={i} className="flex items-start gap-3 pb-3 border-b border-border last:border-b-0">
+                      <span className="text-lg">
+                        {activity.text.startsWith('Session completed') ? '✓' :
+                         activity.text.startsWith('Booking cancelled') ? '✕' :
+                         activity.text.startsWith('Booking confirmed') ? '📅' :
+                         activity.text.startsWith('Session started') ? '▶' :
+                         activity.text.startsWith('Session missed') ? '⏰' : '📌'}
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">{activity.text}</p>
+                        <p className="text-xs text-muted-foreground/60">{activity.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+                )}
               </CardContent>
             </Card>
-
-            {/* Your Journey compact widget */}
-            <JourneyProgress variant="compact" completedSessions={completedSessions.length} moodData={moodData} joinedAt={joinedAt} />
 
             <p className="text-xs text-center text-muted-foreground">All times displayed in EAT (UTC+3)</p>
           </div>

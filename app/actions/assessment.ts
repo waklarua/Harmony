@@ -50,8 +50,10 @@ export async function submitAssessment(answers: number[]) {
   return { score, interpretation }
 }
 
-export async function getAssessmentHistory() {
-  const userId = await getUserId()
+export async function getAssessmentHistory(userId?: string) {
+  if (!userId) {
+    userId = await getUserId()
+  }
 
   const results = await db
     .select()

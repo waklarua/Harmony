@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Search, Users, BookOpen, Heart, MessageSquare, Sparkles, ArrowRight } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { mockCounselors } from "@/lib/mock-data"
+import type { CounselorListItem } from "@/app/actions/dashboard"
 
 type EmptyStateVariant =
   | "no-upcoming-sessions"
@@ -22,12 +22,11 @@ interface EmptyStateProps {
   searchQuery?: string
   title?: string
   description?: string
+  counselors?: CounselorListItem[]
 }
 
-// Get 3 recommended counselors for the empty state
-const recommendedCounselors = mockCounselors.slice(0, 3)
-
-export function EmptyState({ variant, searchQuery, title: customTitle, description: customDescription }: EmptyStateProps) {
+export function EmptyState({ variant, searchQuery, title: customTitle, description: customDescription, counselors = [] }: EmptyStateProps) {
+  const recommendedCounselors = counselors.slice(0, 3)
   const configs: Record<
     EmptyStateVariant,
     {

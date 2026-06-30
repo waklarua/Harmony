@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { user, booking, counselorProfile, review, supportTicket } from '@/lib/db/schema'
 import { eq, and, count, avg, gte, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 export interface PlatformStats {
   totalUsers: number
@@ -168,6 +169,12 @@ export async function approveCounselor(userId: string) {
     .update(user)
     .set({ role: 'guide' })
     .where(eq(user.id, userId))
+
+  await createNotification(
+    userId,
+    'Your counselor account has been approved! You can now start accepting clients.',
+    'system'
+  )
 
   revalidatePath('/steward/counselors')
   revalidatePath('/steward/dashboard')

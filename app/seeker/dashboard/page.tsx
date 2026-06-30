@@ -26,6 +26,8 @@ export default async function SeekerDashboardPage() {
       upcomingSessions={data.upcomingSessions}
       completedSessions={data.completedSessions}
       moodData={data.moodData}
+      activityItems={data.activityItems}
+      recommendedCounselors={data.recommendedCounselors}
       userName={data.userName}
       joinedAt={data.joinedAt}
       latestAssessment={data.latestAssessment}
