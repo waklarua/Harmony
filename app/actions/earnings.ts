@@ -10,18 +10,20 @@ const PLATFORM_COMMISSION = 0.20
 
 export async function addEarning(bookingId: string) {
   const [bk] = await db
-    .select({ counselorId: booking.counselorId })
+    .select({ counselorId: booking.counselorId, amount: booking.amount })
     .from(booking)
     .where(eq(booking.id, bookingId))
     .limit(1)
 
   if (!bk) throw new Error('Booking not found')
 
+  const sessionAmount = Number(bk.amount) || 1500
+
   await db.insert(earnings).values({
     id: crypto.randomUUID(),
     counselorId: bk.counselorId,
     bookingId,
-    amount: 1500,
+    amount: sessionAmount,
   })
 }
 

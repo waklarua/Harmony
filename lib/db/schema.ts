@@ -398,7 +398,7 @@ export const earnings = pgTable(
     bookingId: text('bookingId')
       .notNull()
       .references(() => booking.id, { onDelete: 'cascade' }),
-    amount: integer('amount').notNull().default(1500),
+    amount: integer('amount').notNull(),
     createdAt: timestamp('createdAt').defaultNow(),
   },
   (table) => ({

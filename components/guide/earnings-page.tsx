@@ -43,6 +43,10 @@ export function EarningsPage({ earningsData }: EarningsPageProps) {
     .filter((e) => new Date(e.createdAt) >= yearStart)
     .reduce((sum, e) => sum + e.amount, 0)
 
+  const avgPerBooking = entries.length > 0
+    ? Math.round(entries.reduce((sum, e) => sum + Math.round(e.amount / 0.8), 0) / entries.length)
+    : 0
+
   return (
     <GuideLayout>
       <div className="space-y-6">
@@ -160,7 +164,7 @@ export function EarningsPage({ earningsData }: EarningsPageProps) {
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Per Booking</span>
-                  <span className="font-medium">{formatCurrency(1500)}</span>
+                  <span className="font-medium">{avgPerBooking > 0 ? formatCurrency(avgPerBooking) : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Total Bookings</span>

@@ -138,7 +138,7 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
         counselorId: counselor.id,
         sessionType: "video",
         scheduledAt: pendingBooking.timeValue,
-        amount: 1500,
+        amount: counselor.hourlyRate,
         paymentStatus: "paid",
         paymentReference: reference,
         paymentMethod: method,
@@ -479,8 +479,8 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
       <PaymentModal
         open={showPayment}
         onOpenChange={setShowPayment}
-        amount={1500}
-        counselorName={counselor.name}
+        amount={counselor.hourlyRate}
+            counselorName={counselor.name}
         sessionDate={pendingBooking?.date || ""}
         sessionTime={pendingBooking?.time || ""}
         onConfirm={handlePaymentConfirm}
