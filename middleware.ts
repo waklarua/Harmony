@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   // Check for Better Auth session cookie
   // The actual session validation happens in page-level getSession() calls
   // This middleware just provides a quick redirect for unauthenticated users
-  const sessionCookie = request.cookies.get('better-auth.session_token')
+  const sessionCookie = request.cookies.get('better-auth.session_token') || request.cookies.get('__Secure-better-auth.session_token')
 
   const isProtectedRoute = ['/seeker', '/guide', '/steward'].some((path) =>
     request.nextUrl.pathname.startsWith(path)
