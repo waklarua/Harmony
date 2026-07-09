@@ -48,6 +48,7 @@ import { sendMessage, getSessionEncryptionKey, endSession } from "@/app/actions/
 import { getSessionVideoInfo } from "@/app/actions/video"
 import { decryptMessage } from "@/lib/client-encryption"
 import { SessionNotesPanel } from "@/components/session/session-notes"
+import { SeekerInfoPanel } from "@/components/session/seeker-info-panel"
 import Pusher from "pusher-js"
 
 interface SystemMessage {
@@ -353,6 +354,7 @@ export function SessionRoom({
   const [mode, setMode] = useState<"video" | "text">("video")
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
+  const [showSeekerInfo, setShowSeekerInfo] = useState(false)
   const [showEndDialog, setShowEndDialog] = useState(false)
   const [showMobileChat, setShowMobileChat] = useState(false)
   const [otherParticipantOnline, setOtherParticipantOnline] = useState(false)
@@ -687,10 +689,16 @@ export function SessionRoom({
           </div>
 
           {isCounselor && (
-            <Button variant="ghost" size="icon" onClick={() => setShowNotes(!showNotes)} className="hidden sm:flex">
-              <FileText className="h-4 w-4" />
-              <span className="sr-only">Session notes</span>
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" onClick={() => setShowNotes(!showNotes)} className="hidden sm:flex">
+                <FileText className="h-4 w-4" />
+                <span className="sr-only">Session notes</span>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowSeekerInfo(!showSeekerInfo)} className="hidden sm:flex">
+                <Heart className="h-4 w-4" />
+                <span className="sr-only">Seeker info</span>
+              </Button>
+            </>
           )}
 
           {(bookingStatus === "in_progress" || bookingStatus === "confirmed") && (
@@ -882,6 +890,20 @@ export function SessionRoom({
               </Button>
             </div>
             <SessionNotesPanel bookingId={sessionId} />
+          </div>
+        )}
+
+        {/* Seeker Info Panel — overlays from right, only for counselors */}
+        {isCounselor && showSeekerInfo && (
+          <div className="absolute right-0 top-0 bottom-0 w-80 border-l border-border bg-card p-4 shadow-xl z-20 overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-semibold">Seeker Info</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowSeekerInfo(false)}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close seeker info</span>
+              </Button>
+            </div>
+            <SeekerInfoPanel seekerId={counselorId} onClose={() => setShowSeekerInfo(false)} />
           </div>
         )}
       </div>

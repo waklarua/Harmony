@@ -1,6 +1,6 @@
 import { StewardDashboard } from "@/components/steward/steward-dashboard"
 import { getSession } from "@/lib/auth-utils"
-import { getPlatformStats, getPendingCounselors, getSupportTickets } from "@/app/actions/admin"
+import { getPlatformStats, getPendingCounselors, getSupportTickets, getWeeklySessionTrend } from "@/app/actions/admin"
 import { redirect } from "next/navigation"
 
 export const metadata = {
@@ -19,10 +19,11 @@ export default async function StewardDashboardPage() {
     redirect("/login")
   }
 
-  const [stats, pendingCounselors, supportTickets] = await Promise.all([
+  const [stats, pendingCounselors, supportTickets, sessionTrendData] = await Promise.all([
     getPlatformStats(),
     getPendingCounselors(),
     getSupportTickets(),
+    getWeeklySessionTrend(),
   ])
 
   return (
@@ -30,6 +31,7 @@ export default async function StewardDashboardPage() {
       stats={stats}
       pendingCounselors={pendingCounselors}
       supportTickets={supportTickets}
+      sessionTrendData={sessionTrendData}
     />
   )
 }

@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { notification } from '@/lib/db/schema'
+import { notification, user } from '@/lib/db/schema'
 import { eq, desc, and, count, sql } from 'drizzle-orm'
 import { getUserId } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
@@ -18,6 +18,17 @@ export async function createNotification(
     type,
     isRead: false,
   })
+}
+
+export async function notifyStewards(message: string) {
+  const stewards = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.role, 'steward'))
+
+  for (const s of stewards) {
+    await createNotification(s.id, message, 'system')
+  }
 }
 
 export async function getNotifications() {

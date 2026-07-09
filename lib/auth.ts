@@ -1,5 +1,7 @@
 import { betterAuth } from 'better-auth'
-import { pool } from './db'
+import { pool, db } from './db'
+import { user } from './db/schema'
+import { eq } from 'drizzle-orm'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
@@ -50,6 +52,19 @@ export const auth = betterAuth({
         required: false,
         defaultValue: 'seeker',
         input: true,
+      },
+    },
+  },
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session, _ctx) => {
+          const [userRow] = await db.select({ banned: user.banned }).from(user).where(eq(user.id, session.userId)).limit(1)
+          if (userRow?.banned) {
+            return false
+          }
+          return { data: session }
+        },
       },
     },
   },

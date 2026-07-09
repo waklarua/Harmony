@@ -20,13 +20,10 @@ import {
   Users,
   UserCheck,
   TicketCheck,
-  Settings,
   LogOut,
   Menu,
   X,
   Bell,
-  User,
-  BarChart3,
   BookOpen,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -38,8 +35,8 @@ const navigation = [
   { name: "Dashboard", href: "/steward/dashboard", icon: Home },
   { name: "Users", href: "/steward/users", icon: Users },
   { name: "Counselors", href: "/steward/counselors", icon: UserCheck },
-  { name: "Support", href: "/steward/support", icon: TicketCheck },
-  { name: "Analytics", href: "/steward/analytics", icon: BarChart3 },
+  // { name: "Support", href: "/steward/support", icon: TicketCheck },
+  // { name: "Analytics", href: "/steward/analytics", icon: BarChart3 },
   { name: "Resources", href: "/steward/resources", icon: BookOpen },
 ]
 
@@ -132,6 +129,7 @@ export function StewardLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                {/* Profile & Settings removed — no pages exist
                 <DropdownMenuItem asChild>
                   <Link href="/steward/profile" className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -144,6 +142,7 @@ export function StewardLayout({ children }: { children: React.ReactNode }) {
                     Settings
                   </Link>
                 </DropdownMenuItem>
+                */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive cursor-pointer">
                   <LogOut className="h-4 w-4" />

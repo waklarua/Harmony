@@ -9,6 +9,7 @@ export const user = pgTable('user', {
   name: text('name'),
   image: text('image'),
   role: text('role').default('seeker'),
+  banned: boolean('banned').default(false),
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow(),
 })
@@ -320,6 +321,8 @@ export const userRelations = relations(user, ({ one, many }) => ({
   earningsAsCounselor: many(earnings, { relationName: 'earningsAsCounselor' }),
   waitlistEntriesAsSeeker: many(waitlistEntry, { relationName: 'waitlistSeeker' }),
   waitlistEntriesAsCounselor: many(waitlistEntry, { relationName: 'waitlistCounselor' }),
+  emergencyContacts: many(emergencyContact),
+  therapyGoals: many(therapyGoal),
 }))
 
 export const notificationRelations = relations(notification, ({ one }) => ({
@@ -431,5 +434,39 @@ export const bookingRelations = relations(booking, ({ one, many }) => ({
   sessionNote: one(sessionNote, {
     fields: [booking.id],
     references: [sessionNote.bookingId],
+  }),
+}))
+
+export const emergencyContact = pgTable('emergency_contact', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  relationship: text('relationship'),
+  phone: text('phone').notNull(),
+  email: text('email'),
+  createdAt: timestamp('createdAt').defaultNow(),
+})
+
+export const emergencyContactRelations = relations(emergencyContact, ({ one }) => ({
+  user: one(user, {
+    fields: [emergencyContact.userId],
+    references: [user.id],
+  }),
+}))
+
+export const therapyGoal = pgTable('therapy_goal', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  goal: text('goal').notNull(),
+  status: text('status').default('active'),
+  targetDate: timestamp('targetDate'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow(),
+})
+
+export const therapyGoalRelations = relations(therapyGoal, ({ one }) => ({
+  user: one(user, {
+    fields: [therapyGoal.userId],
+    references: [user.id],
   }),
 }))

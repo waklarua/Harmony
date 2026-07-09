@@ -107,6 +107,7 @@ export async function getFullGuideProfile() {
     certifications: profile[0]?.certifications || [],
     yearsOfExperience: profile[0]?.yearsOfExperience || 0,
     licenseNumber: profile[0]?.licenseNumber || '',
+    hourlyRate: profile[0]?.hourlyRate ? Number(profile[0].hourlyRate) : 0,
   }
 }
 
@@ -116,6 +117,7 @@ export async function updateGuideProfile(data: {
   bio?: string
   specializations?: string[]
   yearsOfExperience?: number
+  hourlyRate?: number
 }) {
   const userId = await getUserId()
 
@@ -139,6 +141,7 @@ export async function updateGuideProfile(data: {
   if (data.bio !== undefined) profileUpdate.bio = data.bio
   if (data.specializations !== undefined) profileUpdate.specializations = data.specializations
   if (data.yearsOfExperience !== undefined) profileUpdate.yearsOfExperience = data.yearsOfExperience
+  if (data.hourlyRate !== undefined) profileUpdate.hourlyRate = String(data.hourlyRate)
 
   if (Object.keys(profileUpdate).length > 0) {
     if (existing.length === 0) {

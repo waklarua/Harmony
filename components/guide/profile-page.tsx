@@ -24,6 +24,7 @@ interface GuideProfileData {
   certifications: string[]
   yearsOfExperience: number
   licenseNumber: string
+  hourlyRate: number
 }
 
 export function GuideProfilePage({ profile }: { profile: GuideProfileData }) {
@@ -34,6 +35,7 @@ export function GuideProfilePage({ profile }: { profile: GuideProfileData }) {
   const [image, setImage] = useState(profile.image)
   const [bio, setBio] = useState(profile.bio)
   const [yearsOfExperience, setYearsOfExperience] = useState(profile.yearsOfExperience)
+  const [hourlyRate, setHourlyRate] = useState(profile.hourlyRate)
   const [specializations, setSpecializations] = useState<string[]>(profile.specializations)
   const [specInput, setSpecInput] = useState("")
 
@@ -58,6 +60,7 @@ export function GuideProfilePage({ profile }: { profile: GuideProfileData }) {
         bio,
         specializations,
         yearsOfExperience,
+        hourlyRate,
       })
       setSaved(true)
       setEditing(false)
@@ -74,6 +77,7 @@ export function GuideProfilePage({ profile }: { profile: GuideProfileData }) {
     setImage(profile.image)
     setBio(profile.bio)
     setYearsOfExperience(profile.yearsOfExperience)
+    setHourlyRate(profile.hourlyRate)
     setSpecializations(profile.specializations)
     setEditing(false)
   }
@@ -215,21 +219,41 @@ export function GuideProfilePage({ profile }: { profile: GuideProfileData }) {
           </CardHeader>
           <CardContent className="space-y-4">
             {editing ? (
-              <div>
-                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                <Input
-                  id="yearsOfExperience"
-                  type="number"
-                  value={yearsOfExperience}
-                  onChange={(e) => setYearsOfExperience(Number(e.target.value))}
-                  className="max-w-xs"
-                />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                  <Input
+                    id="yearsOfExperience"
+                    type="number"
+                    value={yearsOfExperience}
+                    onChange={(e) => setYearsOfExperience(Number(e.target.value))}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hourlyRate">Hourly Rate (ETB)</Label>
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(Number(e.target.value))}
+                    className="max-w-xs"
+                    placeholder="e.g. 1500"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Set your fee per session. This will be shown to clients when they search for counselors.</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-border pb-2">
                   <span className="text-sm text-muted-foreground">Years of Experience</span>
                   <span className="font-medium">{yearsOfExperience > 0 ? yearsOfExperience : 'Not specified'}</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-border pb-2">
+                  <span className="text-sm text-muted-foreground">Hourly Rate</span>
+                  <span className="font-medium">{hourlyRate > 0 ? `ETB ${hourlyRate.toLocaleString()}/session` : 'Not set'}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-border pb-2">
                   <span className="text-sm text-muted-foreground">License Number</span>

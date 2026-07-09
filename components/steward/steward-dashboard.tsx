@@ -10,7 +10,7 @@ import {
   Users,
   UserCheck,
   Calendar,
-  Star,
+  Banknote,
   TrendingUp,
   AlertCircle,
   ArrowRight,
@@ -20,13 +20,6 @@ import {
 } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-
-const sessionTrendData = [
-  { week: "W1", sessions: 180 },
-  { week: "W2", sessions: 210 },
-  { week: "W3", sessions: 195 },
-  { week: "W4", sessions: 262 },
-]
 
 interface SupportTicket {
   id: string
@@ -47,6 +40,12 @@ interface StewardDashboardProps {
     sessionsThisMonth: number
     averageRating: number
     supportTickets: number
+    totalRevenue: number
+    revenueThisMonth: number
+    revenueThisWeek: number
+    grossEarnings: number
+    grossEarningsThisMonth: number
+    grossEarningsThisWeek: number
   }
   pendingCounselors: Array<{
     id: string
@@ -56,9 +55,10 @@ interface StewardDashboardProps {
     avatar: string | null
   }>
   supportTickets: SupportTicket[]
+  sessionTrendData: { week: string; sessions: number }[]
 }
 
-export function StewardDashboard({ stats, pendingCounselors, supportTickets }: StewardDashboardProps) {
+export function StewardDashboard({ stats, pendingCounselors, supportTickets, sessionTrendData }: StewardDashboardProps) {
   const openTickets = supportTickets.filter((t) => t.status !== "resolved")
 
   return (
@@ -68,7 +68,7 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">Welcome back, Henok. Here is your platform overview.</p>
+            <p className="mt-1 text-muted-foreground">Welcome back. Here is your platform overview.</p>
           </div>
           <div className="flex gap-2">
             <Link href="/steward/counselors">
@@ -123,11 +123,11 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
           <Card>
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                <Star className="h-6 w-6 text-accent" />
+                <Banknote className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.averageRating}</p>
-                <p className="text-sm text-muted-foreground">Platform Rating</p>
+                <p className="text-2xl font-bold">{stats.grossEarnings.toLocaleString()} ETB</p>
+                <p className="text-sm text-muted-foreground">Total Earnings</p>
               </div>
             </CardContent>
           </Card>
@@ -274,7 +274,7 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
               </Card>
             )}
 
-            {/* Recent Support Tickets - Names already updated in mock-data */}
+            {/* Recent Support Tickets — commented out
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -317,6 +317,48 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
                 </div>
               </CardContent>
             </Card>
+            */}
+
+            {/* Revenue Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">This week</span>
+                  <span className="font-medium">
+                    {stats.revenueThisWeek.toLocaleString()} ETB
+                    <span className="text-xs text-muted-foreground ml-1.5">
+                      (of {stats.grossEarningsThisWeek.toLocaleString()})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">This month</span>
+                  <span className="font-medium">
+                    {stats.revenueThisMonth.toLocaleString()} ETB
+                    <span className="text-xs text-muted-foreground ml-1.5">
+                      (of {stats.grossEarningsThisMonth.toLocaleString()})
+                    </span>
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-border">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">All time</span>
+                    <span className="font-semibold">
+                      {stats.totalRevenue.toLocaleString()} ETB
+                      <span className="text-xs text-muted-foreground ml-1.5">
+                        (of {stats.grossEarnings.toLocaleString()})
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Quick Stats */}
             <Card>
@@ -325,7 +367,7 @@ export function StewardDashboard({ stats, pendingCounselors, supportTickets }: S
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Active users today</span>
+                  <span className="text-muted-foreground">New users (30 days)</span>
                   <span className="font-medium">{stats.activeUsers}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">

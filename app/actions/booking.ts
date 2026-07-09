@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt, deriveKeyBase64 } from '@/lib/encryption'
 import { pusher } from '@/lib/pusher'
 import { createNotification } from './notifications'
+import { sendEmail } from '@/lib/email'
 import { addEarning } from './earnings'
 import { notifyNextInLine } from './waitlist'
 import { createVideoRoom } from './video'
@@ -104,9 +105,15 @@ export async function createBooking(data: {
   await addEarning(newBooking[0].id)
 
   const [seeker] = await db
-    .select({ name: user.name })
+    .select({ name: user.name, email: user.email })
     .from(user)
     .where(eq(user.id, seekerId))
+    .limit(1)
+
+  const [counselor] = await db
+    .select({ name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, data.counselorId))
     .limit(1)
 
   if (seeker?.name) {
@@ -115,6 +122,22 @@ export async function createBooking(data: {
       `New booking confirmed from ${seeker.name}`,
       'booking'
     )
+  }
+
+  if (counselor?.email && seeker?.name) {
+    sendEmail({
+      to: counselor.email,
+      subject: 'New session booked on Harmony',
+      text: `Hi ${counselor.name || 'there'},\n\nYou have a new session booked with ${seeker.name}.\n\nLog in to view details and prepare for the session.\n\nBest,\nThe Harmony Team`,
+    }).catch(() => {})
+  }
+
+  if (seeker?.email && counselor?.name) {
+    sendEmail({
+      to: seeker.email,
+      subject: 'Your Harmony session is confirmed',
+      text: `Hi ${seeker.name || 'there'},\n\nYour session with ${counselor.name} has been confirmed.\n\nLog in when it's time to join the video session.\n\nBest,\nThe Harmony Team`,
+    }).catch(() => {})
   }
 
   revalidatePath('/seeker/dashboard')
@@ -231,6 +254,20 @@ export async function startSession(bookingId: string) {
     `${callerName} has started`,
     'system'
   )
+
+  const [otherUser] = await db
+    .select({ name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, otherId))
+    .limit(1)
+
+  if (otherUser?.email) {
+    sendEmail({
+      to: otherUser.email,
+      subject: 'Your Harmony session has started',
+      text: `Hi ${otherUser.name || 'there'},\n\nYour session has started. Log in now to join the video call.\n\nBest,\nThe Harmony Team`,
+    }).catch(() => {})
+  }
 
   revalidatePath(`/session/${bookingId}`)
   return { success: true }

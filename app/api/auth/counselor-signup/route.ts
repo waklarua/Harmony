@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { user, counselorProfile } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyStewards } from '@/app/actions/notifications'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest) {
       licenseDocumentUrl: body.licenseDocumentUrl || null,
       status: 'pending',
     })
+
+    const name = body.name || 'A new counselor'
+    notifyStewards(`${name} has signed up as a counselor and is awaiting review.`).catch(() => {})
 
     const response = NextResponse.json({ success: true })
     const setCookie = signupRes.headers.get('set-cookie')

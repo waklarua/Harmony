@@ -1,104 +1,152 @@
-import { drizzle } from "drizzle-orm/node-postgres"
-import { Pool } from "pg"
-import dotenv from "dotenv"
-import path from "path"
+import { db } from '../lib/db'
+import { resource } from '../lib/db/schema'
 
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") })
+const resources = [
+  {
+    id: 'res_anxiety_001',
+    title: 'Understanding Anxiety: Causes, Symptoms, and Coping Strategies',
+    description: 'Learn what anxiety is, how it affects your body and mind, and practical ways to manage it.',
+    category: 'Anxiety',
+    body: `Anxiety is a natural response to stress, but when it becomes persistent and overwhelming, it can interfere with daily life. It is one of the most common mental health challenges, affecting millions of people worldwide. Understanding anxiety is the first step toward managing it effectively.
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 10000,
-})
-const db = drizzle(pool)
+Anxiety manifests in different ways for different people. Common symptoms include a racing heart, shallow breathing, muscle tension, difficulty concentrating, irritability, and a persistent sense of dread or worry. These symptoms can range from mild to severe and may come and go or persist for long periods.
 
-const ARTICLES = [
-  {
-    title: "Understanding Anxiety",
-    category: "Anxiety",
-    description: "Learn about anxiety and gentle ways to find calm in everyday life.",
-    body: "Anxiety is something many of us experience from time to time. It is that feeling of unease, worry, or nervousness that can arise in response to stress or uncertainty. While occasional anxiety is a normal part of life, persistent feelings of worry can begin to feel overwhelming.\n\nThe important thing to remember is that you are not alone, and there are small, steady steps you can take to create more calm in your daily life.\n\nStart by noticing when anxiety shows up without judging yourself for it. Simply acknowledging 'I am feeling anxious right now' can create a small space between you and the feeling. From there, try gentle grounding techniques: name five things you can see, four you can touch, three you can hear, two you can smell, and one you can taste. This practice can help bring your mind back to the present moment.\n\nBreathing exercises can also be a helpful tool. Try breathing in slowly for four counts, holding for four, and breathing out for six. The longer exhale signals your nervous system to settle.\n\nRemember that support is always available. Talking with a counselor, a trusted friend, or a support group can make a meaningful difference. You deserve to feel at ease in your own life, and taking small steps toward that is a sign of strength."
+There are several effective strategies for managing anxiety. Deep breathing exercises, such as the 4-7-8 technique (inhale for 4 seconds, hold for 7, exhale for 8), can help calm your nervous system. Grounding techniques, like the 5-4-3-2-1 method (identify 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, and 1 you can taste), can bring you back to the present moment when anxiety feels overwhelming.
+
+Building a consistent self-care routine is also essential. Regular exercise, adequate sleep, limiting caffeine and alcohol, and maintaining social connections all play a significant role in reducing anxiety levels. If your anxiety feels unmanageable, reaching out to a mental health professional is a sign of strength, not weakness. Therapy, particularly cognitive-behavioral therapy, has been shown to be highly effective in treating anxiety disorders.`,
   },
   {
-    title: "Living with Depression",
-    category: "Depression",
-    description: "Understanding depression and finding moments of light, one step at a time.",
-    body: "Depression can feel like a heavy fog that makes everything harder than it used to be. It is not simply sadness, but a persistent state that can drain energy, motivation, and hope. If you are experiencing depression, please know that this is not your fault and you are not alone.\n\nHealing does not happen all at once. It happens in small, gentle moments. Start with the basics: try to drink water, eat something nourishing, and step outside for even a few minutes. These tiny acts of care are not trivial, they are foundations.\n\nRoutine can be a quiet anchor. Try to wake up and go to bed at similar times each day. Set one small intention each morning, something as simple as 'I will sit by the window for five minutes' or 'I will text a friend today.'\n\nMovement, even gentle stretching or a short walk, can help lift mood over time. You do not need to do it perfectly, just showing up for yourself matters.\n\nMost importantly, please reach out for support. Depression responds well to conversation and connection. Counselors are here to listen without judgment and walk alongside you at your own pace. You are worthy of support and care."
+    id: 'res_depression_001',
+    title: 'Navigating Depression: A Guide to Healing and Hope',
+    description: 'Understanding depression, recognizing its signs, and discovering paths toward recovery and well-being.',
+    category: 'Depression',
+    body: `Depression is more than just feeling sad or going through a rough patch. It is a serious mental health condition that affects how you think, feel, and handle daily activities. Depression can make even simple tasks feel exhausting and can rob you of interest in things you once enjoyed.
+
+Common signs of depression include persistent feelings of sadness, emptiness, or hopelessness, loss of interest in hobbies and activities, changes in appetite or weight, sleep disturbances (either insomnia or sleeping too much), low energy, difficulty concentrating, and thoughts of self-harm or suicide. If you experience several of these symptoms for more than two weeks, it may be time to seek help.
+
+Recovery from depression is possible, and there are many paths to healing. Professional support through therapy, medication, or a combination of both has helped countless people regain their quality of life. Cognitive-behavioral therapy and interpersonal therapy are two evidence-based approaches that can be particularly effective.
+
+Small daily actions can also support your recovery journey. Setting tiny, achievable goals (like making your bed or taking a short walk), maintaining a regular sleep schedule, eating nourishing foods, and staying connected with trusted friends or family members can make a meaningful difference. Remember that healing is not linear — there will be good days and difficult days, and that is okay. Be patient and kind to yourself as you navigate this journey.`,
   },
   {
-    title: "Finding Balance with Stress Management",
-    category: "Stress Management",
-    description: "Simple, supportive ways to navigate the demands of daily life with more ease.",
-    body: "Stress is a natural response to the demands of life. In small doses, it can help us stay focused and motivated. But when stress becomes chronic, it can leave us feeling exhausted, irritable, and overwhelmed.\n\nThe goal is not to eliminate stress completely, but to build a healthier relationship with it. Here are some supportive approaches to consider.\n\nFirst, identify your stressors. Take a few quiet moments to notice what situations trigger stress for you. Writing them down can help you see patterns and prepare for them with more awareness.\n\nSet boundaries that protect your energy. It is okay to say no to commitments that drain you. It is okay to ask for help. Prioritizing your well-being is not selfish, it is necessary.\n\nBuild small resets into your day. A five-minute break to stretch, breathe deeply, or step outside can make a real difference. Think of these as mini-resets for your nervous system.\n\nConnect with others. Talking about what stresses you can lighten the load. Whether it is a friend, family member, or counselor, sharing your experience reminds you that you do not have to carry everything alone.\n\nBe patient and kind with yourself. You are doing the best you can with what you have, and that is enough."
+    id: 'res_stress_001',
+    title: 'Mastering Stress: Techniques for a Calmer Mind',
+    description: 'Practical strategies to understand, reduce, and manage stress in your everyday life.',
+    category: 'Stress Management',
+    body: `Stress is an unavoidable part of life, but how we respond to it makes all the difference. While short-term stress can actually be motivating, chronic stress takes a serious toll on both mental and physical health. Learning to manage stress effectively is one of the most valuable skills you can develop.
+
+When you encounter a stressful situation, your body releases hormones like cortisol and adrenaline, preparing you for a fight-or-flight response. This was useful for our ancestors facing physical threats, but modern stressors — deadlines, financial pressure, relationship conflicts — trigger the same response without allowing your body to return to a relaxed state.
+
+Creating a personal stress management toolkit can help you respond to stress more effectively. Physical activity is one of the most powerful stress relievers, as it burns off stress hormones and releases endorphins. Even a 15-minute walk can shift your mental state. Mindfulness and meditation practices help you stay grounded in the present moment rather than worrying about the future.
+
+Time management is another critical tool. Breaking large tasks into smaller steps, setting realistic priorities, and learning to say no to non-essential commitments can dramatically reduce your stress levels. Remember to schedule regular breaks and activities that bring you joy. If stress feels overwhelming, talking to a counselor can provide you with additional strategies tailored to your specific situation.`,
   },
   {
-    title: "Healing After Trauma",
-    category: "Trauma/PTSD",
-    description: "A gentle guide to understanding trauma and the path toward healing at your own pace.",
-    body: "Trauma can leave lasting imprints on our minds and bodies. Whether it stems from a single event or prolonged experiences, the effects are real and valid. Healing from trauma is not a straight line, and it looks different for everyone.\n\nThe first and most important step is creating safety, both physically and emotionally. This means being in environments and with people who respect your boundaries and make you feel secure. You have the right to feel safe.\n\nYour body holds onto trauma in its own ways. You might notice tension, fatigue, or a heightened startle response. Gentle practices like slow breathing, progressive muscle relaxation, or simply placing a hand on your heart can help your nervous system begin to settle.\n\nYou do not need to retell your story all at once. Healing happens in layers, at your own pace. It is okay to set aside memories that feel too heavy and return to them when you feel ready, if ever.\n\nProfessional support from a trauma-informed counselor can be deeply helpful. They can offer tools and a safe space to process at a pace that feels right for you. You do not have to heal alone, and reaching out is a courageous step forward."
+    id: 'res_trauma_001',
+    title: 'Healing from Trauma: Your Path to Recovery',
+    description: 'Understanding trauma responses and discovering gentle, effective ways to heal and reclaim your life.',
+    category: 'Trauma/PTSD',
+    body: `Trauma is a deeply distressing or disturbing experience that can leave lasting imprints on your mind and body. It is not the event itself that defines trauma, but how your nervous system responds to it. Trauma can result from a single incident or from prolonged exposure to stressful situations, and everyone's experience of trauma is unique.
+
+Common reactions to trauma include flashbacks, nightmares, hypervigilance, avoidance of reminders, emotional numbness, difficulty trusting others, and physical symptoms like headaches or digestive issues. These responses are your brain's way of trying to protect you, but when they persist, they can interfere with your ability to live fully.
+
+Healing from trauma is possible, and it is a journey that requires patience and self-compassion. Professional support is often essential — therapies like EMDR (Eye Movement Desensitization and Reprocessing), trauma-focused cognitive-behavioral therapy, and somatic experiencing have helped many people process traumatic memories and reduce their impact.
+
+Creating safety in your body and environment is a crucial first step. This might mean establishing a calming bedtime routine, identifying safe spaces in your home, developing a list of grounding techniques that work for you, and surrounding yourself with people who respect your boundaries and healing process. Trauma recovery is not about forgetting what happened — it is about integrating the experience so that it no longer controls your present. Take each step at your own pace, and celebrate every small victory along the way.`,
   },
   {
-    title: "Nurturing Healthy Relationships",
-    category: "Relationships",
-    description: "Building connections that honor your needs and the needs of those you care about.",
-    body: "Relationships are at the heart of a meaningful life. Whether with partners, family, friends, or colleagues, the connections we share can be sources of joy, support, and growth. Yet relationships also require care and attention to thrive.\n\nCommunication is the foundation. Try to express your needs openly and honestly, using 'I feel' statements to share your experience without blame. For example, 'I feel overlooked when plans change without notice' invites understanding rather than defensiveness.\n\nListening is just as important. When someone you care about is speaking, try to listen fully without planning your response. Reflect back what you hear: 'It sounds like you are feeling...' This simple practice builds trust and understanding.\n\nBoundaries are essential for healthy relationships. It is okay to say no, to ask for space, and to express what you need. Healthy boundaries are not walls, they are guidelines that help relationships be sustainable and respectful.\n\nConflict is natural. When disagreements arise, aim for connection rather than winning. Take breaks if emotions run high, and return to the conversation when both people feel calmer.\n\nRemember that you deserve relationships where you feel seen, heard, and valued."
+    id: 'res_relationships_001',
+    title: 'Building Healthy Relationships: Communication and Boundaries',
+    description: 'Learn the foundations of strong relationships through effective communication and healthy boundaries.',
+    category: 'Relationships',
+    body: `Healthy relationships are built on a foundation of mutual respect, trust, and open communication. Whether with a partner, family member, friend, or colleague, the quality of our relationships significantly impacts our overall well-being and happiness.
+
+Effective communication is the cornerstone of any strong relationship. This means expressing your thoughts and feelings clearly and honestly while also being willing to listen actively to the other person. Active listening involves giving your full attention, acknowledging what the other person says without interrupting, and reflecting back what you have heard to ensure understanding.
+
+Setting and respecting boundaries is equally important. Boundaries are the limits and guidelines you establish to protect your emotional and physical well-being. They might include how much time you spend with someone, what topics you are comfortable discussing, or what behaviors you find acceptable. Healthy boundaries are not walls — they are guidelines that allow relationships to flourish by ensuring both people feel safe and respected.
+
+Conflict is a normal part of any relationship. The goal is not to avoid conflict entirely but to handle it constructively. Focus on the specific issue at hand rather than attacking the person, use "I" statements to express your feelings (e.g., "I feel hurt when..."), and be willing to compromise. If conflicts feel persistently destructive, couples or family therapy can provide tools to improve communication and deepen your connection.`,
   },
   {
-    title: "Navigating Grief and Loss",
-    category: "Grief/Loss",
-    description: "Understanding grief as a natural, personal journey and finding ways to carry loss with compassion.",
-    body: "Grief is a natural response to loss. It can come from the death of a loved one, the end of a relationship, a major life change, or any significant loss. There is no right or wrong way to grieve, and there is no set timeline.\n\nGrief often comes in waves. Some days may feel manageable, while others hit hard unexpectedly. This is normal. Allow yourself to feel whatever arises, sadness, anger, numbness, or even moments of peace. All of these feelings are valid.\n\nYou do not have to grieve alone. Connecting with others who understand your loss can be deeply comforting. Whether through support groups, trusted friends, or a counselor, sharing your experience can lighten the weight.\n\nFinding small ways to honor what you have lost can be healing. This might mean creating a memory box, writing a letter, lighting a candle, or simply speaking their name aloud. These rituals acknowledge that the bond continues even in absence.\n\nBe gentle with yourself. Grief is exhausting, both emotionally and physically. Rest when you need to, eat what you can, and let go of expectations about how you 'should' be feeling. Your grief is uniquely yours, and it deserves patience and compassion."
+    id: 'res_grief_001',
+    title: 'Coping with Grief: Finding Your Way Through Loss',
+    description: 'Understanding the grieving process and discovering ways to navigate loss with compassion and resilience.',
+    category: 'Grief/Loss',
+    body: `Grief is a natural and universal response to loss. While we often associate grief with the death of a loved one, it can also arise from other losses — the end of a relationship, losing a job, moving away from home, or any significant change that leaves a void in our lives. There is no right or wrong way to grieve, and no set timeline for how long it should last.
+
+The experience of grief is different for everyone. You might feel sadness, anger, guilt, numbness, or even relief. These emotions can come in waves and may be triggered unexpectedly by a memory, a smell, or a special date. Some people find comfort in talking about their loss, while others prefer solitude. Honor whatever you are feeling without judgment.
+
+Supporting yourself through grief requires patience and self-compassion. Allow yourself to feel your emotions without trying to rush through them. Find small ways to take care of your basic needs — eating regularly, getting fresh air, and maintaining a basic routine can provide a sense of stability when everything feels uncertain. Connecting with others who have experienced similar losses, whether through support groups or trusted friends, can help you feel less alone.
+
+Over time, the intensity of grief usually softens. This does not mean you have forgotten or moved on from your loss — it means you have learned to carry it differently. Many people find meaning by creating rituals to honor what they have lost, whether through journaling, creating art, volunteering, or simply setting aside quiet time to remember. If grief feels overwhelming or you find yourself stuck in intense pain for an extended period, seeking support from a grief counselor can be immensely helpful.`,
   },
   {
-    title: "Building Self-Esteem",
-    category: "Self-Esteem",
-    description: "Quietly strengthening your relationship with yourself through small, meaningful practices.",
-    body: "Self-esteem is the way we see and value ourselves. It is not about being better than others or achieving more, it is about recognizing your inherent worth as a person. If your inner voice is harsh or critical, know that you can gently reshape that relationship over time.\n\nStart by noticing your inner dialogue. When you notice self-critical thoughts, try softening them. Instead of 'I am not good enough,' try 'I am doing my best, and that is enough.' This is not about false positivity, it is about treating yourself with the same kindness you would offer a friend.\n\nCelebrate small wins. Did you get out of bed today? Did you complete a task you had been putting off? Did you reach out to someone? These all count. Acknowledging your efforts builds momentum and self-trust.\n\nSurround yourself with people who lift you up. The company you keep shapes how you see yourself. Seek relationships that feel affirming and respectful.\n\nTry something new, even if you might not be good at it at first. Learning a new skill or hobby, without pressure to excel, can remind you that growth is about the journey, not perfection.\n\nYou are worthy of love and respect, including from yourself. Building self-esteem is a gentle, ongoing practice, and every small step matters."
+    id: 'res_selfesteem_001',
+    title: 'Building Self-Esteem: Embracing Your Worth',
+    description: 'Practical steps to develop a healthier self-image and cultivate lasting self-worth.',
+    category: 'Self-Esteem',
+    body: `Self-esteem is your overall sense of your own worth and value as a person. When your self-esteem is healthy, you are able to acknowledge both your strengths and weaknesses without letting either define you. Low self-esteem, on the other hand, can hold you back from pursuing opportunities, forming healthy relationships, and living a fulfilling life.
+
+Low self-esteem often stems from negative experiences and messages received during childhood, but it can also be reinforced by current circumstances, comparisons to others, and the voices of criticism we internalize over time. Common signs of low self-esteem include a persistent fear of failure, difficulty accepting compliments, people-pleasing behavior, and a harsh inner critic that magnifies mistakes while minimizing achievements.
+
+Building healthier self-esteem is a gradual process that begins with awareness. Start by noticing the stories you tell yourself about who you are. When you hear that critical inner voice, ask yourself: Would I speak to a friend this way? Practice replacing self-critical thoughts with more balanced, compassionate ones. This is not about false positivity but about developing a more realistic and kind perspective on yourself.
+
+Take concrete actions that reinforce your sense of capability and worth. Set small goals and follow through on them. Learn a new skill. Help someone else. Each time you act in alignment with your values, you send a powerful message to yourself that you matter. Surround yourself with people who uplift and support you, and limit time with those who diminish you. Remember that your worth is not something you need to earn — it is inherent, and it is yours.`,
   },
   {
-    title: "Navigating Life Transitions",
-    category: "Life Transitions",
-    description: "Finding your footing during times of change with patience, self-compassion, and support.",
-    body: "Life is full of transitions, some chosen and some unexpected. Whether it is starting a new job, moving to a new place, ending a relationship, becoming a parent, or any significant change, transitions can bring a mix of excitement, uncertainty, and stress.\n\nFirst, give yourself permission to feel all of it. It is normal to feel both hopeful and scared, ready and unsure. You do not have to have it all figured out. Transition is a process, not a single moment.\n\nCreate small anchors of stability. During times of change, routines can be grounding. Try to keep consistent sleep and meal times, maintain a simple morning ritual, or set aside time each day for something that brings you comfort, like reading, walking, or listening to music.\n\nGive yourself time to adjust. Major life changes take time to integrate. Be patient with yourself if you feel disoriented or uncertain. This is a natural part of the process.\n\nSeek connection. Talking with others who have been through similar transitions can provide perspective and reassurance. You do not have to navigate change alone.\n\nRemember that transitions, even difficult ones, can open doors to new growth and understanding. You have navigated change before, and you have the strength to navigate this too."
+    id: 'res_transitions_001',
+    title: 'Navigating Life Transitions: Embracing Change',
+    description: 'Strategies to cope with major life changes and grow through periods of transition.',
+    category: 'Life Transitions',
+    body: `Life is full of transitions — some expected, like graduating, starting a new job, or becoming a parent, and others unexpected, like a sudden loss, illness, or an unforeseen career change. Even positive transitions can be accompanied by stress, uncertainty, and a sense of disorientation as you leave the familiar behind and step into the unknown.
+
+During periods of transition, it is normal to experience a wide range of emotions. You might feel excitement and anticipation alongside fear and grief for what you are leaving behind. This mixture of feelings can be confusing, but it is a natural part of the change process. Allow yourself to feel all of it without judging yourself for having conflicting emotions.
+
+Creating structure during times of change can provide a sense of stability and control. Maintain consistent routines around sleep, meals, and exercise as much as possible. Identify a few anchors in your day — small rituals or activities that remain constant regardless of what else is changing. These anchors can be as simple as a morning cup of tea, a daily walk, or an evening gratitude practice.
+
+Transitions also offer opportunities for growth and self-discovery. Take time to reflect on what you want your new chapter to look like. What have you learned from your past experiences? What values do you want to carry forward? What do you want to leave behind? Journaling, talking with trusted friends, or working with a counselor can help you process the transition and emerge with greater clarity and resilience. Remember that discomfort is temporary, and every ending makes space for a new beginning.`,
   },
   {
-    title: "Understanding Addiction with Compassion",
-    category: "Addiction",
-    description: "A supportive look at addiction, recovery, and the courage it takes to seek change.",
-    body: "Addiction is a complex experience that affects millions of people. It is not a moral failing or a lack of willpower, it is a condition that deserves understanding and compassionate support. If you are struggling with addiction, please know that you are not alone and that help is available.\n\nRecovery is not about perfection. It is about progress, one step at a time. If you have a setback, that does not erase the steps you have already taken. Each day is a new opportunity to choose care for yourself.\n\nBuilding a support system is one of the most powerful things you can do. This might include trusted friends, family members, support groups, or a counselor who specializes in addiction. Connection reduces shame and reminds you that you are more than your struggles.\n\nFind healthy coping strategies that work for you, whether that is exercise, creative expression, meditation, or spending time in nature. These activities can fill some of the space that addiction has occupied.\n\nProfessional support can make a profound difference. Counselors can help you understand the underlying causes of addiction and develop strategies that honor your unique journey. You deserve support, and reaching out is an act of courage and self-compassion."
+    id: 'res_addiction_001',
+    title: 'Understanding Addiction: Recovery and Support',
+    description: 'Learning about addiction as a health condition and exploring paths toward recovery and healing.',
+    category: 'Addiction',
+    body: `Addiction is a complex condition characterized by compulsive substance use or behavior despite harmful consequences. It is important to understand that addiction is not a moral failing or a lack of willpower — it is a brain disorder that affects the way your brain processes reward, motivation, and memory. Recognizing addiction as a health condition rather than a character flaw is a crucial step toward effective treatment and recovery.
+
+The development of addiction typically follows a pattern. What begins as voluntary use or behavior gradually becomes compulsive as the brain's reward system adapts. Over time, you may need more of the substance or behavior to achieve the same effect, and you may experience withdrawal symptoms when you try to stop. This cycle can feel impossible to break alone, but recovery is absolutely possible with the right support.
+
+Treatment for addiction looks different for everyone. Some people benefit from medically supervised detoxification followed by inpatient or outpatient rehabilitation programs. Others find peer support groups like Alcoholics Anonymous or SMART Recovery to be essential components of their recovery. Therapy, particularly cognitive-behavioral therapy, can help identify and change the thought patterns and behaviors that contribute to addiction.
+
+Recovery is a lifelong journey, not a destination. It often involves multiple attempts and setbacks, and that is perfectly normal. What matters is continuing to reach out for support and recommitting to your goals. If you or someone you care about is struggling with addiction, please know that help is available. Speaking with a healthcare provider, calling a helpline, or attending a support group meeting can be the first step toward a healthier, more fulfilling life in recovery.`,
   },
   {
-    title: "Finding Peace with Food and Body Image",
-    category: "Eating Disorders",
-    description: "Moving toward a kinder relationship with food, your body, and yourself.",
-    body: "Our relationship with food and our bodies is deeply personal and can be shaped by many factors, including culture, family, and life experiences. If you struggle with disordered eating or negative body image, please know that healing is possible and you deserve support.\n\nThe journey begins with separating your worth from your appearance. Your value as a person has nothing to do with what you look like or what you eat. Challenge the idea that your body needs to be 'fixed.' Instead, consider what your body does for you, it carries you through each day, and it deserves care and respect.\n\nTry to move away from rigid food rules. Restriction often leads to cycles of control and loss of control. Instead, aim for gentle nourishment: eating regularly, including foods that feel good and satisfy you, and giving yourself permission to enjoy food without guilt.\n\nNotice the language you use about food and your body. Try replacing judgmental statements with neutral or kind ones. Instead of 'I was bad for eating that,' try 'I ate that and enjoyed it, and that is okay.'\n\nProfessional support is especially important for eating disorders. Counselors who specialize in this area can help you untangle the complex feelings around food and body image in a safe, nonjudgmental space. You deserve to feel at peace with yourself, and reaching out for help is a powerful step toward that peace."
+    id: 'res_eating_001',
+    title: 'Healing Your Relationship with Food and Body',
+    description: 'Understanding eating disorders and developing a healthier, more compassionate relationship with food and your body.',
+    category: 'Eating Disorders',
+    body: `Eating disorders are serious mental health conditions that affect a person's relationship with food, body image, and overall well-being. They include anorexia nervosa, bulimia nervosa, binge eating disorder, and other specified feeding or eating disorders. These conditions can affect anyone regardless of age, gender, or background, and they are not a choice or a lifestyle — they are complex illnesses that require professional care.
+
+The causes of eating disorders are multifaceted, involving genetic, biological, psychological, and sociocultural factors. Cultural pressures to achieve a certain body type, perfectionism, trauma, and difficulties with emotional regulation can all contribute to the development of disordered eating patterns. Recognizing these underlying factors is essential for meaningful recovery.
+
+Recovery from an eating disorder is possible, and it typically involves a multidisciplinary approach. Medical professionals monitor physical health, while therapists help address the psychological aspects of the disorder. Nutritional counseling can help rebuild a healthy relationship with food, and support groups provide connection with others who understand what you are going through. Intuitive eating — learning to trust your body's hunger and fullness cues without judgment — is one approach that many find helpful in recovery.
+
+If you are struggling with an eating disorder, reaching out for help is the most important step you can take. Talk to a trusted healthcare provider who can connect you with specialized treatment. Remember that you deserve to have a peaceful relationship with food and your body. Healing is not about achieving a certain size or shape — it is about freedom from the constant preoccupation with food and appearance, and reclaiming the energy and attention that your eating disorder has been consuming. You are worthy of that freedom.`,
   },
 ]
 
 async function main() {
-  console.log(`Seeding ${ARTICLES.length} resources...`)
-
-  for (const article of ARTICLES) {
-    await pool.query(
-      `INSERT INTO "resource" ("id", "title", "description", "category", "body")
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        `res_seed_${article.category.toLowerCase().replace(/[^a-z]/g, "_")}`,
-        article.title,
-        article.description,
-        article.category,
-        article.body,
-      ]
-    )
-    console.log(`  ✓ ${article.title}`)
+  console.log('Seeding resources...')
+  for (const r of resources) {
+    await db.insert(resource).values({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      body: r.body,
+    }).onConflictDoNothing()
+    console.log(`  ✓ ${r.title}`)
   }
-
-  console.log("Done!")
-  await pool.end()
-  process.exit(0)
+  console.log(`\nDone! ${resources.length} resources seeded.`)
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+main().catch(console.error)
