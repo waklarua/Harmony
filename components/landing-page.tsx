@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -22,6 +23,7 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 import { formatCurrency } from "@/lib/format"
+import { authClient } from "@/lib/auth-client"
 import { SkipLinks } from "@/components/shared/skip-links"
 import { CrisisLink } from "@/components/shared/crisis-banner"
 
@@ -34,7 +36,15 @@ function TelegramIcon({ className }: { className?: string }) {
 }
 
 export function LandingPage() {
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: session } = authClient.useSession()
+
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -81,14 +91,32 @@ export function LandingPage() {
 
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Get Started</Button>
-            </Link>
+            {session ? (
+              <>
+                {(() => {
+                  const role = (session.user as { role?: string })?.role || 'seeker'
+                  const dashboardHref =
+                    role === 'guide' ? '/guide/dashboard'
+                    : role === 'steward' ? '/steward/dashboard'
+                    : '/seeker/dashboard'
+                  return (
+                    <Link href={dashboardHref}>
+                      <Button variant="ghost" size="sm">Dashboard</Button>
+                    </Link>
+                  )
+                })()}
+                <Button variant="outline" size="sm" onClick={handleLogout}>Sign Out</Button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -114,14 +142,32 @@ export function LandingPage() {
                 Privacy & Security
               </Link>
               <div className="flex gap-3 pt-4">
-                <Link href="/login" className="flex-1">
-                  <Button variant="outline" className="w-full bg-transparent">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/signup" className="flex-1">
-                  <Button className="w-full">Get Started</Button>
-                </Link>
+                {session ? (
+                  <>
+                    {(() => {
+                      const role = (session.user as { role?: string })?.role || 'seeker'
+                      const dashboardHref =
+                        role === 'guide' ? '/guide/dashboard'
+                        : role === 'steward' ? '/steward/dashboard'
+                        : '/seeker/dashboard'
+                      return (
+                        <Link href={dashboardHref} className="flex-1">
+                          <Button variant="outline" className="w-full bg-transparent">Dashboard</Button>
+                        </Link>
+                      )
+                    })()}
+                    <Button className="flex-1" onClick={handleLogout}>Sign Out</Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="flex-1">
+                      <Button variant="outline" className="w-full bg-transparent">Sign In</Button>
+                    </Link>
+                    <Link href="/signup" className="flex-1">
+                      <Button className="w-full">Get Started</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

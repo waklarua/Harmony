@@ -5,7 +5,7 @@ import { MessageSquare } from "lucide-react" // Import MessageSquare here
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,16 +15,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Heart, Home, Search, Calendar, BookOpen, Settings, LogOut, Menu, X, Bell, User, Sparkles, ChevronLeft } from "lucide-react"
-import { mockUser } from "@/lib/mock-data"
+import { Heart, Home, Search, Calendar, BookOpen, Settings, LogOut, Menu, X, Bell, User, Sparkles, ChevronLeft, ClipboardList } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
+import { NotificationBell } from "@/components/notification-bell"
 
 const navigation = [
   { name: "Dashboard", href: "/seeker/dashboard", icon: Home },
   { name: "Sessions", href: "/seeker/sessions", icon: Calendar },
   { name: "Messages", href: "/seeker/messages", icon: MessageSquare },
   { name: "Resources", href: "/seeker/resources", icon: BookOpen },
+  { name: "Assessment", href: "/seeker/assessment", icon: ClipboardList },
   { name: "My Profile", href: "/seeker/profile", icon: User },
   { name: "Settings", href: "/seeker/settings", icon: Settings },
 ]
@@ -35,8 +37,16 @@ const actionNav = [
 
 export function SeekerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { data: session } = authClient.useSession()
+
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,16 +108,15 @@ export function SeekerLayout({ children }: { children: React.ReactNode }) {
 
             {/* Logout */}
             <div className="border-t border-border pt-4 mt-auto">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-destructive transition-colors"
-                  title={!sidebarOpen ? "Logout" : undefined}
-                >
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
-                  {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-destructive transition-colors"
+                title={!sidebarOpen ? "Logout" : undefined}
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
+              </Button>
             </div>
           </div>
         </aside>
@@ -146,30 +155,26 @@ export function SeekerLayout({ children }: { children: React.ReactNode }) {
 
               <ThemeToggle />
 
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
-                      <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
                   <div className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
-                      <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">{mockUser.name}</span>
-                      <span className="text-xs text-muted-foreground">{mockUser.email}</span>
+                      <span className="text-sm font-medium">{session?.user?.name || "User"}</span>
+                      <span className="text-xs text-muted-foreground">{session?.user?.email || ""}</span>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
@@ -180,11 +185,9 @@ export function SeekerLayout({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/" className="flex items-center gap-2 text-destructive">
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </Link>
+                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive cursor-pointer">
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

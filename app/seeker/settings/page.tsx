@@ -3,10 +3,10 @@ import { SettingsPage } from "@/components/seeker/settings-page"
 
 export const metadata = {
   title: "Settings | Harmony",
-  description: "Manage your account settings, privacy, notifications, and preferences",
+  description: "Manage your account security and preferences",
 }
 
-export default function Settings() {
+export default async function Settings() {
   return (
     <SeekerLayout>
       <SettingsPage />

@@ -12,7 +12,7 @@ async function SignupPageContent() {
   const session = await getSession()
 
   if (session?.user) {
-    redirect("/seeker/dashboard")
+    redirect("/")
   }
 
   return <SignupForm />

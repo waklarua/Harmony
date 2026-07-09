@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,17 +8,31 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StewardLayout } from "./steward-layout"
 import { Search, MessageSquare, Clock, AlertCircle, CheckCircle } from "lucide-react"
-import { mockSupportTickets } from "@/lib/mock-data"
 
-export function SupportPage() {
+interface SupportTicket {
+  id: string
+  userId: string
+  userName: string
+  subject: string
+  status: string
+  priority: string
+  createdAt: string
+  lastUpdate: string
+}
+
+interface SupportPageProps {
+  tickets: SupportTicket[]
+}
+
+export function SupportPage({ tickets }: SupportPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
 
-  const openTickets = mockSupportTickets.filter((t) => t.status === "open")
-  const inProgressTickets = mockSupportTickets.filter((t) => t.status === "in-progress")
-  const resolvedTickets = mockSupportTickets.filter((t) => t.status === "resolved")
+  const openTickets = tickets.filter((t) => t.status === "open")
+  const inProgressTickets = tickets.filter((t) => t.status === "in-progress")
+  const resolvedTickets = tickets.filter((t) => t.status === "resolved")
 
-  const filterTickets = (tickets: typeof mockSupportTickets) => {
-    return tickets.filter(
+  const filterTickets = (ticketList: SupportTicket[]) => {
+    return ticketList.filter(
       (ticket) =>
         ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.userName.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -38,7 +52,7 @@ export function SupportPage() {
     }
   }
 
-  const TicketCard = ({ ticket }: { ticket: (typeof mockSupportTickets)[0] }) => (
+  const TicketCard = ({ ticket }: { ticket: SupportTicket }) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -132,7 +146,7 @@ export function SupportPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                <div className="text-2xl font-bold">{mockSupportTickets.length}</div>
+                <div className="text-2xl font-bold">{tickets.length}</div>
               </div>
               <p className="text-sm text-muted-foreground">Total Tickets</p>
             </CardContent>

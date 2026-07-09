@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const _inter = Inter({ subsets: ["latin"] })
@@ -47,6 +48,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased ${_inter.className}`}>
         {children}
+        <Toaster />
         <Analytics />
       </body>
     </html>

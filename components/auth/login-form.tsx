@@ -26,12 +26,19 @@ export function LoginForm() {
     setError(null)
 
     try {
-      await authClient.signIn.email({
+      const { data, error } = await authClient.signIn.email({
         email,
         password,
       })
+      if (error) throw new Error(error.message)
 
-      router.push("/seeker/dashboard")
+      const role = (data?.user as { role?: string })?.role || 'seeker'
+      const dashboard =
+        role === 'guide' ? '/guide/dashboard'
+        : role === 'steward' ? '/steward/dashboard'
+        : '/seeker/dashboard'
+
+      router.push(dashboard)
       router.refresh()
     } catch (err: any) {
       setError(err.message || "Failed to sign in. Please check your credentials.")

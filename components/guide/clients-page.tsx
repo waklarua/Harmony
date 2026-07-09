@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,27 +9,31 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GuideLayout } from "./guide-layout"
-import { Search, Calendar, MessageSquare, FileText, MoreVertical } from "lucide-react"
+import { Search, Calendar, MessageSquare, FileText, MoreVertical, Timer } from "lucide-react"
+import { canJoinSession, getJoinButtonLabel } from "@/lib/session-utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { mockClients } from "@/lib/mock-data"
 import { EmptyState } from "@/components/shared/empty-state"
+import type { GuideClientItem } from "@/app/actions/dashboard"
 
-export function ClientsPage() {
+interface ClientsPageProps {
+  clients: GuideClientItem[]
+}
+
+export function ClientsPage({ clients }: ClientsPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
 
-  const activeClients = mockClients.filter((c) => c.status === "active")
-  const newClients = mockClients.filter((c) => c.status === "new")
-  const inactiveClients = mockClients.filter((c) => c.status === "inactive")
+  const activeClients = clients.filter((c) => c.status === "active")
+  const newClients = clients.filter((c) => c.status === "new")
+  const pastClients = clients.filter((c) => c.status === "past")
 
-  const filterClients = (clients: typeof mockClients) => {
-    return clients.filter(
+  const filterClients = (list: GuideClientItem[]) => {
+    return list.filter(
       (client) =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.notes?.toLowerCase().includes(searchQuery.toLowerCase()),
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()),
     )
   }
 
-  const ClientCard = ({ client }: { client: (typeof mockClients)[0] }) => (
+  const ClientCard = ({ client }: { client: GuideClientItem }) => (
     <Card>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
@@ -62,35 +67,55 @@ export function ClientsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Send Message
+              <DropdownMenuItem asChild className="gap-2">
+                <Link href="/guide/messages">
+                  <MessageSquare className="h-4 w-4" />
+                  Send Message
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Schedule Session
+              <DropdownMenuItem asChild className="gap-2">
+                <Link href="/guide/schedule">
+                  <Calendar className="h-4 w-4" />
+                  Schedule Session
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2">
-                <FileText className="h-4 w-4" />
-                View Notes
-              </DropdownMenuItem>
+              {client.bookingId && (
+                <DropdownMenuItem asChild className="gap-2">
+                  <Link href={`/session/${client.bookingId}`}>
+                    <FileText className="h-4 w-4" />
+                    Open Session
+                  </Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button size="sm" className="gap-1">
-            <Calendar className="h-3 w-3" />
-            {client.nextSession ? "Reschedule" : "Schedule"}
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1 bg-transparent">
-            <MessageSquare className="h-3 w-3" />
-            Message
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1 bg-transparent">
-            <FileText className="h-3 w-3" />
-            Notes
-          </Button>
+          {client.bookingId && canJoinSession(client.scheduledAt, null, null) ? (
+            <Link href={`/session/${client.bookingId}`}>
+              <Button size="sm" className="gap-1">
+                <MessageSquare className="h-3 w-3" />
+                Join Session
+              </Button>
+            </Link>
+          ) : client.bookingId ? (
+            <Button size="sm" className="gap-1" disabled>
+              <Timer className="h-3 w-3" />
+              {getJoinButtonLabel(client.scheduledAt)}
+            </Button>
+          ) : (
+            <Button size="sm" className="gap-1" disabled>
+              <Calendar className="h-3 w-3" />
+              Schedule
+            </Button>
+          )}
+          <Link href="/guide/messages">
+            <Button variant="outline" size="sm" className="gap-1 bg-transparent">
+              <MessageSquare className="h-3 w-3" />
+              Message
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
@@ -133,7 +158,7 @@ export function ClientsPage() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="inactive">Past</TabsTrigger>
+            <TabsTrigger value="past">Past</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active" className="mt-6">
@@ -158,12 +183,12 @@ export function ClientsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="inactive" className="mt-6">
+          <TabsContent value="past" className="mt-6">
             <div className="grid gap-4">
-              {filterClients(inactiveClients).map((client) => (
+              {filterClients(pastClients).map((client) => (
                 <ClientCard key={client.id} client={client} />
               ))}
-              {filterClients(inactiveClients).length === 0 && (
+              {filterClients(pastClients).length === 0 && (
                 <EmptyState variant={searchQuery ? "no-search-results" : "no-past-clients"} searchQuery={searchQuery} />
               )}
             </div>

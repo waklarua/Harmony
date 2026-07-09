@@ -11,7 +11,7 @@ export default async function LoginPage() {
   const session = await getSession()
 
   if (session?.user) {
-    redirect("/seeker/dashboard")
+    redirect("/")
   }
 
   return <LoginForm />

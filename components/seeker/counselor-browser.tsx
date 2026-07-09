@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SeekerLayout } from "./seeker-layout"
 import { Search, Star, CheckCircle, Filter, ArrowRight } from "lucide-react"
-import { mockCounselors } from "@/lib/mock-data"
 import { formatCurrency } from "@/lib/format"
 
 const specialties = [
@@ -25,12 +24,30 @@ const specialties = [
   "Family Dynamics",
 ]
 
-export function CounselorBrowser() {
+interface Counselor {
+  id: string
+  name: string
+  title: string
+  specialties: string[]
+  rating: number
+  reviewCount: number
+  yearsExperience: number
+  hourlyRate: number
+  avatar: string | null
+  bio: string | null
+  verified: boolean
+}
+
+interface CounselorBrowserProps {
+  counselors: Counselor[]
+}
+
+export function CounselorBrowser({ counselors }: CounselorBrowserProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSpecialty, setSelectedSpecialty] = useState("All Specialties")
   const [sortBy, setSortBy] = useState("rating")
 
-  const filteredCounselors = mockCounselors
+  const filteredCounselors = counselors
     .filter((counselor) => {
       const matchesSearch =
         counselor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

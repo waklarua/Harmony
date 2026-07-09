@@ -18,10 +18,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // If has session cookie and on login/signup page, redirect to dashboard
+  // If has session cookie and on login/signup page, redirect to landing page
+  // The landing page has client-side logic to route by role
   const isAuthPage = ['/login', '/signup'].includes(request.nextUrl.pathname)
   if (isAuthPage && sessionCookie) {
-    return NextResponse.redirect(new URL('/seeker/dashboard', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()

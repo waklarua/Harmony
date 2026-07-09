@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { GuideLayout } from "./guide-layout"
+import Link from "next/link"
 import { Search, MessageCircle } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
 
@@ -20,39 +21,9 @@ interface Message {
   status: "active" | "archived"
 }
 
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    clientName: "Abeba Geleta",
-    clientAvatar: "/professional-portrait.png",
-    lastMessage: "Thank you for the session today. The techniques you suggested are really helping.",
-    timestamp: "1 hour ago",
-    unread: 1,
-    status: "active",
-  },
-  {
-    id: "2",
-    clientName: "Yohannes Tekle",
-    clientAvatar: "/professional-portrait.png",
-    lastMessage: "Can we reschedule next week's appointment?",
-    timestamp: "3 hours ago",
-    unread: 0,
-    status: "active",
-  },
-  {
-    id: "3",
-    clientName: "Tizita Haile",
-    clientAvatar: "/professional-portrait.png",
-    lastMessage: "I've been practicing the breathing exercises daily.",
-    timestamp: "2 days ago",
-    unread: 0,
-    status: "active",
-  },
-]
-
-export function GuideMessagesPage() {
-  const activeMessages = mockMessages.filter((m) => m.status === "active")
-  const archivedMessages = mockMessages.filter((m) => m.status === "archived")
+export function GuideMessagesPage({ conversations = [] }: { conversations?: Message[] }) {
+  const activeMessages = conversations.filter((m) => m.status === "active")
+  const archivedMessages = conversations.filter((m) => m.status === "archived")
   const unreadCount = activeMessages.reduce((sum, m) => sum + m.unread, 0)
 
   return (
@@ -90,8 +61,8 @@ export function GuideMessagesPage() {
             {activeMessages.length > 0 ? (
               <div className="space-y-3">
                 {activeMessages.map((message) => (
+                  <Link key={message.id} href={`/chat/${message.id}`}>
                   <Card
-                    key={message.id}
                     className="cursor-pointer hover:border-primary/50 transition-colors"
                   >
                     <CardContent className="p-4">
@@ -116,9 +87,10 @@ export function GuideMessagesPage() {
                             </div>
                           )}
                         </div>
-                      </div>
+                          </div>
                     </CardContent>
                   </Card>
+                  </Link>
                 ))}
               </div>
             ) : (

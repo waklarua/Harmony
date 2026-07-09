@@ -6,21 +6,123 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { GuideLayout } from "./guide-layout"
-import { Calendar, Clock, ArrowRight, Video, Users, TrendingUp, Star, MessageSquare, FileText } from "lucide-react"
-import { mockClients, mockGuideSchedule, mockGuide } from "@/lib/mock-data"
+import { Calendar, Clock, ArrowRight, Video, Users, TrendingUp, Save, Loader2, CheckCircle2, Timer } from "lucide-react"
+import { canJoinSession, getJoinButtonLabel } from "@/lib/session-utils"
 import { formatCurrency } from "@/lib/format"
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { useEffect, useState, useCallback } from "react"
+import { getMyAvailability, saveCounselorAvailability } from "@/app/actions/availability"
+import { getWaitlistForCounselor } from "@/app/actions/waitlist"
+import { Switch } from "@/components/ui/switch"
+import type { AvailabilitySlot } from "@/app/actions/availability"
 
-const earningsData = [
-  { month: "Oct", amount: 136800 },
-  { month: "Nov", amount: 159600 },
-  { month: "Dec", amount: 182400 },
+interface GuideDashboardProps {
+  todaysSessions: Array<{
+    id: string
+    clientId: string
+    clientName: string
+    clientAvatar: string | null
+    time: string
+    duration: number | null
+    status: string
+    type: string
+    scheduledAt: string
+  }>
+  activeClients: Array<{
+    id: string
+    name: string
+    avatar: string | null
+    lastSession: string
+    totalSessions: number
+    status: string
+  }>
+  bookingRequests: Array<{
+    id: string
+    clientId: string
+    clientName: string
+    clientAvatar: string | null
+    date: string
+    time: string
+    status: string
+    scheduledAt: string
+  }>
+  guideName: string
+  earningsData: {
+    total: number
+    thisMonth: number
+    entries: Array<{
+      id: string
+      bookingId: string
+      amount: number
+      createdAt: string
+    }>
+  }
+}
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const TIME_OPTIONS = [
+  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
+  '21:00', '22:00', '23:00', '00:00',
 ]
 
-export function GuideDashboard() {
-  const todaysSessions = mockGuideSchedule.filter((s) => s.status === "upcoming")
-  const activeClients = mockClients.filter((c) => c.status === "active")
+export function GuideDashboard({ todaysSessions, activeClients, bookingRequests, guideName, earningsData }: GuideDashboardProps) {
+  const [availability, setAvailability] = useState<Record<number, AvailabilitySlot | null>>({})
+  const [availLoading, setAvailLoading] = useState(true)
+  const [availSaving, setAvailSaving] = useState(false)
+  const [availSaved, setAvailSaved] = useState(false)
+  const [waitlistEntries, setWaitlistEntries] = useState<Array<{ id: string; seekerName: string | null; createdAt: Date | null }>>([])
+  const [wlLoading, setWlLoading] = useState(true)
+
+  useEffect(() => {
+    getWaitlistForCounselor()
+      .then(setWaitlistEntries)
+      .catch(() => {})
+      .finally(() => setWlLoading(false))
+  }, [])
+
+  useEffect(() => {
+    getMyAvailability().then((slots) => {
+      const map: Record<number, AvailabilitySlot | null> = {}
+      for (let i = 0; i < 7; i++) {
+        const found = slots.find((s) => s.dayOfWeek === i)
+        map[i] = found || null
+      }
+      setAvailability(map)
+    }).catch(() => {}).finally(() => setAvailLoading(false))
+  }, [])
+
+  const toggleDay = useCallback((day: number) => {
+    setAvailability((prev) => {
+      if (prev[day]) {
+        return { ...prev, [day]: null }
+      }
+      return { ...prev, [day]: { dayOfWeek: day, startTime: '09:00', endTime: '17:00' } }
+    })
+  }, [])
+
+  const updateTime = useCallback((day: number, field: 'startTime' | 'endTime', value: string) => {
+    setAvailability((prev) => {
+      const slot = prev[day]
+      if (!slot) return prev
+      return { ...prev, [day]: { ...slot, [field]: value } }
+    })
+  }, [])
+
+  const handleSaveAvailability = async () => {
+    setAvailSaving(true)
+    setAvailSaved(false)
+    const slots = Object.values(availability).filter((s): s is AvailabilitySlot => s !== null)
+    try {
+      await saveCounselorAvailability(slots)
+      setAvailSaved(true)
+      setTimeout(() => setAvailSaved(false), 3000)
+    } catch {
+      // ignore
+    } finally {
+      setAvailSaving(false)
+    }
+  }
 
   return (
     <GuideLayout>
@@ -28,7 +130,7 @@ export function GuideDashboard() {
         {/* Welcome Section */}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Welcome back, Dr. {mockGuide.name.split(" ")[1]}
+            Welcome back, Dr. {guideName.split(" ")[1]}
           </h1>
           <p className="text-muted-foreground">
             {todaysSessions.length} session{todaysSessions.length !== 1 ? "s" : ""} scheduled today
@@ -73,7 +175,7 @@ export function GuideDashboard() {
                 </div>
                 <div>
                   <p className="font-semibold">Earnings</p>
-                  <p className="text-sm opacity-90">{formatCurrency(182400)} this month</p>
+                  <p className="text-sm opacity-90">{formatCurrency(earningsData.thisMonth)} this month</p>
                 </div>
               </CardContent>
             </Card>
@@ -82,7 +184,7 @@ export function GuideDashboard() {
 
         {/* Main Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Today's Schedule & Earnings */}
+          {/* Left Column - Today's Schedule */}
           <div className="space-y-6 lg:col-span-2">
             {/* Today's Schedule */}
             <Card>
@@ -128,12 +230,16 @@ export function GuideDashboard() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/session/${session.id}`}>
-                            <Button size="sm">Start Session</Button>
-                          </Link>
-                          <Button variant="outline" size="sm">
-                            View Notes
-                          </Button>
+                          {canJoinSession(session.scheduledAt, session.duration, session.status) ? (
+                            <Link href={`/session/${session.id}`}>
+                              <Button size="sm">Start Session</Button>
+                            </Link>
+                          ) : (
+                            <Button size="sm" disabled>
+                              <Timer className="mr-1.5 h-3.5 w-3.5" />
+                              {getJoinButtonLabel(session.scheduledAt, session.duration)}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -144,46 +250,6 @@ export function GuideDashboard() {
                     <p className="mt-4 text-muted-foreground">No sessions scheduled for today</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Earnings Chart */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-primary" />
-                      Earnings Overview
-                    </CardTitle>
-                    <CardDescription>Your earnings over the past 3 months (ETB)</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={{
-                    amount: {
-                      label: "Earnings (ETB)",
-                      color: "var(--primary)",
-                    },
-                  }}
-                  className="h-[200px] w-full"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={earningsData}>
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="amount" fill="var(--color-amount)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -201,62 +267,110 @@ export function GuideDashboard() {
                   <Users className="h-8 w-8 text-primary/50" />
                 </CardContent>
               </Card>
-              <Card className="border-l-4 border-l-accent">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average Rating</p>
-                    <p className="text-2xl font-bold">4.9</p>
-                  </div>
-                  <Star className="h-8 w-8 text-accent/50" />
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-green-500">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sessions This Month</p>
-                    <p className="text-2xl font-bold">24</p>
-                  </div>
-                  <Calendar className="h-8 w-8 text-green-500/50" />
-                </CardContent>
-              </Card>
             </div>
 
-            {/* New Booking Requests */}
+            {/* Waitlist */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Booking Requests</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Waitlist
+                </CardTitle>
+                <CardDescription>Seekers waiting for an opening</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start justify-between p-3 rounded-lg bg-muted/30">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/professional-portrait.png" alt="Musse Ahmed" />
-                      <AvatarFallback>M</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">Musse Ahmed</p>
-                      <p className="text-xs text-muted-foreground">Requested today</p>
-                    </div>
+              <CardContent>
+                {wlLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-                  <Badge className="text-xs">New</Badge>
-                </div>
+                ) : waitlistEntries.length > 0 ? (
+                  <div className="space-y-3">
+                    {waitlistEntries.map((entry, i) => (
+                      <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                            {i + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{entry.seekerName || 'Anonymous'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Joined {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : 'Unknown'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No one on the waitlist</p>
+                )}
               </CardContent>
             </Card>
 
-            {/* Quick Access */}
+            {/* Availability Settings */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quick Tools</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Working Hours</CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveAvailability}
+                    disabled={availLoading || availSaving}
+                    className="gap-1.5"
+                  >
+                    {availSaving ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : availSaved ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    {availSaved ? 'Saved' : 'Save'}
+                  </Button>
+                </div>
+                <CardDescription>Set your weekly availability</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-2">
-                <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
-                  <FileText className="h-4 w-4" />
-                  Session Notes Template
-                </Button>
-                <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
-                  <MessageSquare className="h-4 w-4" />
-                  Message a Client
-                </Button>
+              <CardContent>
+                {availLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {DAY_NAMES.map((name, i) => {
+                      const slot = availability[i]
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <Switch checked={!!slot} onCheckedChange={() => toggleDay(i)} />
+                          <span className="w-10 text-sm font-medium">{name}</span>
+                          {slot && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <select
+                                value={slot.startTime}
+                                onChange={(e) => updateTime(i, 'startTime', e.target.value)}
+                                className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+                              >
+                                {TIME_OPTIONS.map((t) => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                              <span className="text-muted-foreground">–</span>
+                              <select
+                                value={slot.endTime}
+                                onChange={(e) => updateTime(i, 'endTime', e.target.value)}
+                                className="rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+                              >
+                                {TIME_OPTIONS.map((t) => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

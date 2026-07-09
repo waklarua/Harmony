@@ -21,8 +21,7 @@ import {
   CheckCircle2,
   Flame,
 } from "lucide-react"
-import { mockSessions, mockMoodData, mockUser } from "@/lib/mock-data"
-import { ResponsiveContainer, XAxis, YAxis, Area, AreaChart } from "recharts"
+import { XAxis, YAxis, Area, AreaChart } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface Milestone {
@@ -39,22 +38,25 @@ interface Milestone {
 
 interface JourneyProgressProps {
   variant?: "full" | "compact"
+  completedSessions?: number
+  moodData?: Array<{ date: string; value: number; note?: string | null }>
+  joinedAt?: string
 }
 
-export function JourneyProgress({ variant = "full" }: JourneyProgressProps) {
-  const completedSessions = mockSessions.filter((s) => s.status === "completed").length
-  const memberSince = new Date(mockUser.joinedAt)
+export function JourneyProgress({ variant = "full", completedSessions: completedCount, moodData = [], joinedAt }: JourneyProgressProps) {
+  const completedSessions = completedCount ?? 0
+  const memberSince = joinedAt ? new Date(joinedAt) : new Date()
   const now = new Date()
   const daysOnPlatform = Math.floor((now.getTime() - memberSince.getTime()) / (1000 * 60 * 60 * 24))
   const weeksOnPlatform = Math.floor(daysOnPlatform / 7)
 
   // Calculate mood trend
   const moodTrend = useMemo(() => {
-    if (mockMoodData.length < 2) return 0
-    const recentAvg = mockMoodData.slice(-3).reduce((a, b) => a + b.value, 0) / 3
-    const earlierAvg = mockMoodData.slice(0, 3).reduce((a, b) => a + b.value, 0) / 3
+    if (moodData.length < 2) return 0
+    const recentAvg = moodData.slice(-3).reduce((a, b) => a + b.value, 0) / 3
+    const earlierAvg = moodData.slice(0, 3).reduce((a, b) => a + b.value, 0) / 3
     return ((recentAvg - earlierAvg) / earlierAvg) * 100
-  }, [])
+  }, [moodData])
 
   // Define milestones
   const milestones: Milestone[] = [
@@ -383,36 +385,34 @@ export function JourneyProgress({ variant = "full" }: JourneyProgressProps) {
               }}
               className="h-[250px] w-full"
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockMoodData}>
-                  <defs>
-                    <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                  <YAxis
-                    domain={[1, 5]}
-                    ticks={[1, 2, 3, 4, 5]}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => {
-                      const labels = ["", "Low", "Fair", "Good", "Great", "Excellent"]
-                      return labels[value] || ""
-                    }}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--color-value)"
-                    strokeWidth={2}
-                    fill="url(#moodGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <AreaChart data={moodData}>
+                <defs>
+                  <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <YAxis
+                  domain={[1, 5]}
+                  ticks={[1, 2, 3, 4, 5]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => {
+                    const labels = ["", "Low", "Fair", "Good", "Great", "Excellent"]
+                    return labels[value] || ""
+                  }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--color-value)"
+                  strokeWidth={2}
+                  fill="url(#moodGradient)"
+                />
+              </AreaChart>
             </ChartContainer>
 
             <div className="mt-4 flex items-center justify-center gap-6 text-sm">

@@ -1,307 +1,333 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, Edit2, User, Heart, Target, MessageSquare, Star } from "lucide-react"
-import { mockUser, mockCounselors } from "@/lib/mock-data"
+import { Calendar, Heart, Edit2, Target, Phone, Plus, Trash2, CheckCircle } from "lucide-react"
+import { getEmergencyContacts, addEmergencyContact, deleteEmergencyContact } from "@/app/actions/emergency-contacts"
+import { getTherapyGoals, addTherapyGoal, updateGoalStatus, deleteTherapyGoal } from "@/app/actions/therapy-goals"
 
-export function ProfilePage() {
+interface ProfilePageProps {
+  userName?: string
+  userEmail?: string
+  userAvatar?: string
+  joinedAt?: string
+  completedSessionsCount?: number
+}
+
+interface EmergencyContact {
+  id: string
+  name: string
+  relationship: string | null
+  phone: string
+  email: string | null
+}
+
+interface TherapyGoal {
+  id: string
+  goal: string
+  status: string
+  targetDate: string | null
+}
+
+export function ProfilePage({
+  userName = "User",
+  userEmail = "",
+  userAvatar = "",
+  joinedAt = "Recently",
+  completedSessionsCount = 0,
+}: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [bio, setBio] = useState(
-    "I'm on a journey to better understand myself and improve my mental well-being. Looking forward to growing with the support of professional guidance.",
-  )
+  const [name, setName] = useState(userName)
   const [pronouns, setPronouns] = useState("she/her")
-  const [goals, setGoals] = useState(["anxiety", "stress", "self-esteem"])
-  const [communicationStyle, setCommunicationStyle] = useState("balanced")
-  const [reminderPreference, setReminderPreference] = useState("1-hour")
 
-  const upcomingSessions = [
-    {
-      id: 1,
-      counselor: mockCounselors[0],
-      date: "Tomorrow",
-      time: "10:00 AM EAT",
-      type: "Video Session",
-    },
-    {
-      id: 2,
-      counselor: mockCounselors[1],
-      date: "Jan 25, 2024",
-      time: "2:00 PM EAT",
-      type: "Chat Session",
-    },
-  ]
+  // Emergency contacts
+  const [contacts, setContacts] = useState<EmergencyContact[]>([])
+  const [showAddContact, setShowAddContact] = useState(false)
+  const [newContact, setNewContact] = useState({ name: "", relationship: "", phone: "", email: "" })
 
-  const pastSessions = [
-    { id: 1, counselor: mockCounselors[0], date: "Jan 15, 2024", rating: 5 },
-    { id: 2, counselor: mockCounselors[0], date: "Jan 8, 2024", rating: 5 },
-    { id: 3, counselor: mockCounselors[1], date: "Jan 5, 2024", rating: 4 },
-    { id: 4, counselor: mockCounselors[0], date: "Dec 28, 2023", rating: 5 },
-    { id: 5, counselor: mockCounselors[1], date: "Dec 20, 2023", rating: 4 },
-  ]
+  // Therapy goals
+  const [goals, setGoals] = useState<TherapyGoal[]>([])
+  const [showAddGoal, setShowAddGoal] = useState(false)
+  const [newGoal, setNewGoal] = useState({ goal: "", targetDate: "" })
 
-  const therapyGoals = [
-    { id: "anxiety", label: "Managing Anxiety" },
-    { id: "depression", label: "Coping with Depression" },
-    { id: "stress", label: "Stress Management" },
-    { id: "relationships", label: "Relationship Issues" },
-    { id: "self-esteem", label: "Building Self-Esteem" },
-    { id: "grief", label: "Grief & Loss" },
-    { id: "trauma", label: "Trauma Recovery" },
-    { id: "career", label: "Career Guidance" },
-  ]
+  useEffect(() => {
+    getEmergencyContacts().then(setContacts).catch(() => {})
+    getTherapyGoals().then(setGoals).catch(() => {})
+  }, [])
 
-  const toggleGoal = (goalId: string) => {
-    setGoals((prev) => (prev.includes(goalId) ? prev.filter((g) => g !== goalId) : [...prev, goalId]))
+  const handleAddContact = async () => {
+    if (!newContact.name || !newContact.phone) return
+    await addEmergencyContact(newContact)
+    setContacts(await getEmergencyContacts())
+    setNewContact({ name: "", relationship: "", phone: "", email: "" })
+    setShowAddContact(false)
+  }
+
+  const handleDeleteContact = async (id: string) => {
+    await deleteEmergencyContact(id)
+    setContacts((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  const handleAddGoal = async () => {
+    if (!newGoal.goal) return
+    await addTherapyGoal({ goal: newGoal.goal, targetDate: newGoal.targetDate || undefined })
+    setGoals(await getTherapyGoals())
+    setNewGoal({ goal: "", targetDate: "" })
+    setShowAddGoal(false)
+  }
+
+  const handleToggleGoal = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "achieved" ? "active" : "achieved"
+    await updateGoalStatus(id, nextStatus)
+    setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, status: nextStatus } : g)))
+  }
+
+  const handleDeleteGoal = async (id: string) => {
+    await deleteTherapyGoal(id)
+    setGoals((prev) => prev.filter((g) => g.id !== id))
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       {/* Profile Header */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
-              <AvatarFallback className="text-3xl">{mockUser.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={userAvatar || "/placeholder.svg"} alt={userName} />
+              <AvatarFallback className="text-3xl">{userName.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-center sm:text-left">
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold">{mockUser.name}</h1>
-                  <p className="text-muted-foreground">{pronouns}</p>
+                <div className="w-full">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="text-lg font-semibold"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <h1 className="text-2xl font-semibold">{name}</h1>
+                      {userEmail && <p className="text-sm text-muted-foreground mt-1">{userEmail}</p>}
+                    </>
+                  )}
                 </div>
-                <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setIsEditing(!isEditing)}>
+                <Button variant="outline" className="gap-2 bg-transparent shrink-0" onClick={() => setIsEditing(!isEditing)}>
                   <Edit2 className="h-4 w-4" />
                   {isEditing ? "Cancel" : "Edit Profile"}
                 </Button>
               </div>
+              {isEditing && (
+                <div className="mt-2 space-y-2">
+                  <Label htmlFor="pronouns">Preferred Pronouns</Label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={pronouns}
+                    onChange={(e) => setPronouns(e.target.value)}
+                  >
+                    <option value="she/her">She/Her</option>
+                    <option value="he/him">He/Him</option>
+                    <option value="they/them">They/Them</option>
+                    <option value="prefer-not">Prefer not to say</option>
+                  </select>
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  <span>Joined December 2023</span>
+                  <span>Joined {joinedAt}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Heart className="h-4 w-4" />
-                  <span>12 Sessions Completed</span>
+                  <span>{completedSessionsCount} Sessions Completed</span>
                 </div>
                 <Badge variant="secondary">Active Member</Badge>
               </div>
+              {isEditing && (
+                <div className="mt-4">
+                  <Button onClick={() => setIsEditing(false)}>Save Changes</Button>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* About Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              About
-            </CardTitle>
-            <CardDescription>Tell counselors a bit about yourself</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isEditing ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={4}
-                    placeholder="Share a bit about yourself..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pronouns">Preferred Pronouns</Label>
-                  <Select value={pronouns} onValueChange={setPronouns}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="she/her">She/Her</SelectItem>
-                      <SelectItem value="he/him">He/Him</SelectItem>
-                      <SelectItem value="they/them">They/Them</SelectItem>
-                      <SelectItem value="prefer-not">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button>Save Changes</Button>
-              </>
-            ) : (
-              <p className="text-muted-foreground">{bio}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Therapy Goals */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Therapy Goals
-            </CardTitle>
-            <CardDescription>What you&apos;re working on</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isEditing ? (
-              <div className="grid grid-cols-2 gap-3">
-                {therapyGoals.map((goal) => (
-                  <div key={goal.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={goal.id}
-                      checked={goals.includes(goal.id)}
-                      onCheckedChange={() => toggleGoal(goal.id)}
-                    />
-                    <Label htmlFor={goal.id} className="text-sm font-normal cursor-pointer">
-                      {goal.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {goals.map((goalId) => {
-                  const goal = therapyGoals.find((g) => g.id === goalId)
-                  return goal ? (
-                    <Badge key={goalId} variant="secondary">
-                      {goal.label}
-                    </Badge>
-                  ) : null
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Sessions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Upcoming Sessions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingSessions.map((session) => (
-              <div key={session.id} className="flex items-center gap-3 rounded-lg border p-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={session.counselor.avatar || "/placeholder.svg"} alt={session.counselor.name} />
-                  <AvatarFallback>{session.counselor.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{session.counselor.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {session.date} at {session.time}
-                  </p>
-                </div>
-                <Badge variant="outline">{session.type}</Badge>
-              </div>
-            ))}
-            <Link href="/seeker/sessions">
-              <Button variant="link" className="h-auto p-0 text-sm">
-                View All Sessions
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Past Sessions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Session History
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pastSessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={session.counselor.avatar || "/placeholder.svg"} alt={session.counselor.name} />
-                    <AvatarFallback>{session.counselor.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{session.counselor.name}</p>
-                    <p className="text-xs text-muted-foreground">{session.date}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm">{session.rating}</span>
-                </div>
-              </div>
-            ))}
-            <Link href="/seeker/sessions">
-              <Button variant="link" className="h-auto p-0 text-sm">
-                View All Sessions
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Preferences */}
+      {/* Therapy Goals */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Session Preferences
-          </CardTitle>
-          <CardDescription>Help us match you with the right counselor</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Therapy Goals
+              </CardTitle>
+              <CardDescription>What you&apos;re working on</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1 bg-transparent" onClick={() => setShowAddGoal(true)}>
+              <Plus className="h-4 w-4" />
+              Add Goal
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {isEditing ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Preferred Communication Style</Label>
-                <Select value={communicationStyle} onValueChange={setCommunicationStyle}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="direct">Direct & Straightforward</SelectItem>
-                    <SelectItem value="balanced">Balanced</SelectItem>
-                    <SelectItem value="gentle">Gentle & Supportive</SelectItem>
-                  </SelectContent>
-                </Select>
+          {showAddGoal && (
+            <div className="mb-4 space-y-3 rounded-lg border border-border p-4">
+              <div>
+                <Label htmlFor="goal">Goal</Label>
+                <Input
+                  id="goal"
+                  value={newGoal.goal}
+                  onChange={(e) => setNewGoal((p) => ({ ...p, goal: e.target.value }))}
+                  placeholder="e.g. Manage anxiety better"
+                />
               </div>
-              <div className="space-y-2">
-                <Label>Session Reminder</Label>
-                <Select value={reminderPreference} onValueChange={setReminderPreference}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30-min">30 minutes before</SelectItem>
-                    <SelectItem value="1-hour">1 hour before</SelectItem>
-                    <SelectItem value="1-day">1 day before</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div>
+                <Label htmlFor="targetDate">Target date (optional)</Label>
+                <Input
+                  id="targetDate"
+                  type="date"
+                  value={newGoal.targetDate}
+                  onChange={(e) => setNewGoal((p) => ({ ...p, targetDate: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleAddGoal}>Save</Button>
+                <Button variant="outline" size="sm" className="bg-transparent" onClick={() => setShowAddGoal(false)}>Cancel</Button>
               </div>
             </div>
+          )}
+
+          {goals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No goals set yet. Click &ldquo;Add Goal&rdquo; to get started.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              {goals.map((g) => (
+                <div key={g.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => handleToggleGoal(g.id, g.status)} className="focus:outline-none">
+                      {g.status === "achieved" ? (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/40" />
+                      )}
+                    </button>
+                    <div>
+                      <p className={`text-sm font-medium ${g.status === "achieved" ? "line-through text-muted-foreground" : ""}`}>
+                        {g.goal}
+                      </p>
+                      {g.targetDate && (
+                        <p className="text-xs text-muted-foreground">Target: {g.targetDate}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={g.status === "achieved" ? "default" : "secondary"} className="text-xs">
+                      {g.status}
+                    </Badge>
+                    <button onClick={() => handleDeleteGoal(g.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Emergency Contacts */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                Emergency Contacts
+              </CardTitle>
+              <CardDescription>People to reach out to in a crisis</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1 bg-transparent" onClick={() => setShowAddContact(true)}>
+              <Plus className="h-4 w-4" />
+              Add Contact
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showAddContact && (
+            <div className="mb-4 space-y-3 rounded-lg border border-border p-4">
               <div>
-                <p className="text-sm font-medium">Communication Style</p>
-                <p className="text-sm text-muted-foreground capitalize">{communicationStyle.replace("-", " & ")}</p>
+                <Label htmlFor="contactName">Name</Label>
+                <Input
+                  id="contactName"
+                  value={newContact.name}
+                  onChange={(e) => setNewContact((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Full name"
+                />
               </div>
               <div>
-                <p className="text-sm font-medium">Session Reminder</p>
-                <p className="text-sm text-muted-foreground">{reminderPreference.replace("-", " ")} before</p>
+                <Label htmlFor="relationship">Relationship (optional)</Label>
+                <Input
+                  id="relationship"
+                  value={newContact.relationship}
+                  onChange={(e) => setNewContact((p) => ({ ...p, relationship: e.target.value }))}
+                  placeholder="e.g. Mother, Friend"
+                />
               </div>
+              <div>
+                <Label htmlFor="contactPhone">Phone</Label>
+                <Input
+                  id="contactPhone"
+                  value={newContact.phone}
+                  onChange={(e) => setNewContact((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="+251 9XX XXX XXXX"
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactEmail">Email (optional)</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={newContact.email}
+                  onChange={(e) => setNewContact((p) => ({ ...p, email: e.target.value }))}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleAddContact}>Save</Button>
+                <Button variant="outline" size="sm" className="bg-transparent" onClick={() => setShowAddContact(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No emergency contacts added.</p>
+          ) : (
+            <div className="space-y-2">
+              {contacts.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.relationship && `${c.relationship} • `}{c.phone}
+                      {c.email && ` • ${c.email}`}
+                    </p>
+                  </div>
+                  <button onClick={() => handleDeleteContact(c.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

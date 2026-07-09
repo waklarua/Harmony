@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -20,29 +20,37 @@ import {
   Users,
   UserCheck,
   TicketCheck,
-  Settings,
   LogOut,
   Menu,
   X,
   Bell,
-  User,
-  BarChart3,
+  BookOpen,
 } from "lucide-react"
-import { mockSteward } from "@/lib/mock-data"
+import { authClient } from "@/lib/auth-client"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
+import { NotificationBell } from "@/components/notification-bell"
 
 const navigation = [
   { name: "Dashboard", href: "/steward/dashboard", icon: Home },
   { name: "Users", href: "/steward/users", icon: Users },
   { name: "Counselors", href: "/steward/counselors", icon: UserCheck },
-  { name: "Support", href: "/steward/support", icon: TicketCheck },
-  { name: "Analytics", href: "/steward/analytics", icon: BarChart3 },
+  // { name: "Support", href: "/steward/support", icon: TicketCheck },
+  // { name: "Analytics", href: "/steward/analytics", icon: BarChart3 },
+  { name: "Resources", href: "/steward/resources", icon: BookOpen },
 ]
 
 export function StewardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: session } = authClient.useSession()
+
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,35 +106,30 @@ export function StewardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                3
-              </span>
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={mockSteward.avatar || "/placeholder.svg"} alt={mockSteward.name} />
-                    <AvatarFallback>{mockSteward.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                    <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end">
                 <div className="flex items-center gap-2 p-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={mockSteward.avatar || "/placeholder.svg"} alt={mockSteward.name} />
-                    <AvatarFallback>{mockSteward.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                    <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium">{mockSteward.name}</span>
-                    <span className="text-xs text-muted-foreground">{mockSteward.email}</span>
+                    <span className="text-sm font-medium">{session?.user?.name || "User"}</span>
+                    <span className="text-xs text-muted-foreground">{session?.user?.email || ""}</span>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                {/* Profile & Settings removed — no pages exist
                 <DropdownMenuItem asChild>
                   <Link href="/steward/profile" className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -139,12 +142,11 @@ export function StewardLayout({ children }: { children: React.ReactNode }) {
                     Settings
                   </Link>
                 </DropdownMenuItem>
+                */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/" className="flex items-center gap-2 text-destructive">
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Link>
+                <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive cursor-pointer">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
