@@ -522,7 +522,7 @@ export function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/counselors" className="hover:text-foreground">
+                  <Link href="/seeker/counselors" className="hover:text-foreground">
                     Find a Counselor
                   </Link>
                 </li>
@@ -531,11 +531,7 @@ export function LandingPage() {
                     For Counselors
                   </Link>
                 </li>
-                <li>
-                  <Link href="/pricing" className="hover:text-foreground">
-                    Pricing
-                  </Link>
-                </li>
+
               </ul>
             </div>
             <div className="group rounded-xl border border-border/20 bg-background/50 p-4 shadow-[0_0_15px_rgba(74,247,255,0.15)] transition-all duration-300 hover:border-primary/40 hover:bg-background/70 hover:shadow-[0_0_25px_rgba(74,247,255,0.35)]">
@@ -586,7 +582,7 @@ export function LandingPage() {
           </div>
           <div className="mt-12 border-t border-border pt-8">
             <p className="text-center text-sm text-muted-foreground">
-              © 2025 Harmony. All rights reserved. Made with care in Ethiopia.
+              © 2026 Harmony. All rights reserved. Made with care in Ethiopia.
             </p>
           </div>
         </div>

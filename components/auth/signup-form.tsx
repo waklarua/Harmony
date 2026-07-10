@@ -382,7 +382,7 @@ export function SignupForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor="licenseUrl">
-                      License Document URL <span className="text-muted-foreground">(optional)</span>
+                      License Document URL
                     </Label>
                     <Input
                       id="licenseUrl"

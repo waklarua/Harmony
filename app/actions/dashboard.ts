@@ -682,7 +682,11 @@ export async function getSeekerSessions(userId: string) {
   })
 
   return {
-    upcoming: all.filter((s) => s.status === 'pending' || s.status === 'confirmed'),
+    upcoming: all.filter((s) => {
+      if (s.status !== 'pending' && s.status !== 'confirmed') return false
+      const scheduledEnd = new Date(s.scheduledAt).getTime() + (s.duration || 60) * 60000
+      return Date.now() < scheduledEnd
+    }),
     active: all.filter((s) => {
       if (s.status === 'in_progress') return true
       if (s.status === 'completed') {
@@ -693,7 +697,7 @@ export async function getSeekerSessions(userId: string) {
     }),
     past: all.filter((s) => {
       if (s.status === 'cancelled' || s.status === 'missed') return true
-      if (s.status === 'completed') {
+      if (s.status === 'pending' || s.status === 'confirmed' || s.status === 'completed') {
         const scheduledEnd = new Date(s.scheduledAt).getTime() + (s.duration || 60) * 60000
         return Date.now() >= scheduledEnd
       }
