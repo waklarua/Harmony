@@ -1,10 +1,15 @@
-import { CounselorsPage } from "@/components/public/counselors-page"
+import { getSession } from "@/lib/auth-utils"
+import { redirect } from "next/navigation"
 
-export const metadata = {
-  title: "Find a Counselor | Harmony",
-  description: "Browse our network of licensed counselors and find the right match for your mental health journey.",
-}
+export default async function Page() {
+  const session = await getSession()
 
-export default function Page() {
-  return <CounselorsPage />
+  if (session?.user) {
+    const role = (session.user as { role?: string })?.role || "seeker"
+    if (role === "guide") redirect("/guide/dashboard")
+    if (role === "steward") redirect("/steward/dashboard")
+    redirect("/seeker/dashboard")
+  }
+
+  redirect("/login")
 }

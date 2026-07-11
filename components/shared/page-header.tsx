@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Heart, Search, DollarSign, Info } from "lucide-react"
+import { Heart, Search, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SkipLinks } from "@/components/shared/skip-links"
@@ -25,19 +25,13 @@ export function PageHeader() {
 
           <div className="hidden items-center gap-2 rounded-full border border-border/50 bg-background/80 px-4 py-2 shadow-lg shadow-primary/5 backdrop-blur-sm md:flex">
             <Link
-              href="/counselors"
+              href="/seeker/counselors"
               className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/10 hover:text-foreground hover:shadow-md hover:shadow-primary/20"
             >
               <Search className="h-4 w-4" />
               <span>Find a Counselor</span>
             </Link>
-            <Link
-              href="/pricing"
-              className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/10 hover:text-foreground hover:shadow-md hover:shadow-primary/20"
-            >
-              <DollarSign className="h-4 w-4" />
-              <span>Pricing</span>
-            </Link>
+
             <Link
               href="/about"
               className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/10 hover:text-foreground hover:shadow-md hover:shadow-primary/20"
