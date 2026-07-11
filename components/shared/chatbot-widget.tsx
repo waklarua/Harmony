@@ -1,13 +1,23 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageCircle, X, Send, Bot, User } from "lucide-react"
+import { MessageCircle, X, Send, Sparkles, User } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { initialQuickReplies, crisisKeywords, crisisResponse } from "@/lib/chatbot-responses"
+import { authClient } from "@/lib/auth-client"
+import {
+  initialQuickReplies,
+  crisisKeywords,
+  crisisResponse,
+  findBestResponse,
+  contextQuickReplies,
+  fallbackQuickReplies,
+  fallbackResponse,
+} from "@/lib/chatbot-responses"
 
 interface Message {
   id: string
@@ -19,7 +29,7 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-        <Bot className="h-4 w-4 text-primary" />
+        <Sparkles className="h-4 w-4 text-primary" />
       </div>
       <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-muted px-4 py-3">
         <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:0ms]" />
@@ -30,12 +40,40 @@ function TypingIndicator() {
   )
 }
 
+function getContextKey(pathname: string, role: string | undefined): string {
+  if (!role || role === "seeker") {
+    if (pathname.startsWith("/seeker/counselors")) return "seeker_counselors"
+    if (pathname.startsWith("/seeker/assessment")) return "seeker_assessment"
+    if (pathname.startsWith("/seeker/messages")) return "seeker_messages"
+    if (pathname.startsWith("/session/")) return "seeker_session"
+    if (pathname.startsWith("/seeker/")) return "seeker_dashboard"
+    return "unauthenticated"
+  }
+  if (role === "guide") {
+    if (pathname.startsWith("/guide/schedule")) return "guide_schedule"
+    if (pathname.startsWith("/guide/clients")) return "guide_clients"
+    if (pathname.startsWith("/guide/")) return "guide_dashboard"
+    return "unauthenticated"
+  }
+  if (role === "steward") {
+    if (pathname.startsWith("/steward/")) return "steward"
+    return "unauthenticated"
+  }
+  return "unauthenticated"
+}
+
 export function ChatbotWidget() {
+  const pathname = usePathname()
+  const { data: session } = authClient.useSession()
+  const role = (session?.user as { role?: string })?.role
+
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
+  const [currentFollowUps, setCurrentFollowUps] = useState<string[]>([])
+  const [showPulse, setShowPulse] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,24 +84,44 @@ export function ChatbotWidget() {
   useEffect(() => {
     if (open && !hasOpened) {
       setHasOpened(true)
-      addBotMessage(
-        "Hi! I'm your Harmony assistant. I can help you with questions about booking sessions, payments, your account, and more. How can I help?",
-      )
+      const ctxKey = getContextKey(pathname, role)
+      const greetingQuickReplies = contextQuickReplies[ctxKey] ?? contextQuickReplies.unauthenticated
+      setCurrentFollowUps(greetingQuickReplies)
+      setMessages([
+        {
+          id: crypto.randomUUID(),
+          role: "bot",
+          content:
+            "Hi, I'm your Harmony Assistant. I'm here to help with anything about Harmony — booking, payments, your account, and more. What can I help with today?",
+        },
+      ])
     }
+  }, [open, hasOpened, pathname, role])
+
+  useEffect(() => {
     if (open && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300)
     }
   }, [open])
 
-  const addBotMessage = useCallback((content: string) => {
+  useEffect(() => {
+    if (open || hasOpened) return
+    const timer = setTimeout(() => setShowPulse(true), 30000)
+    return () => clearTimeout(timer)
+  }, [open, hasOpened])
+
+  const addBotMessage = useCallback((content: string, followUps?: string[]) => {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "bot", content }])
     setIsTyping(false)
+    if (followUps) setCurrentFollowUps(followUps)
+    else setCurrentFollowUps([])
   }, [])
 
   const handleSend = useCallback(
-    async (text: string) => {
+    (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
+      setCurrentFollowUps([])
 
       const lower = trimmed.toLowerCase()
       const isCrisis = crisisKeywords.some((kw) => lower.includes(kw))
@@ -74,31 +132,24 @@ export function ChatbotWidget() {
       if (isCrisis) {
         setIsTyping(true)
         setTimeout(() => {
-          addBotMessage(crisisResponse.response)
-        }, 800)
+          addBotMessage(crisisResponse.response, crisisResponse.followUps)
+        }, 1000)
         return
       }
 
       setIsTyping(true)
-
-      try {
-        const history = messages.map((m) => ({ role: m.role === "user" ? "user" : "model", content: m.content }))
-
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed, history }),
-        })
-
-        if (!res.ok) throw new Error("API error")
-
-        const data = await res.json()
-        addBotMessage(data.response)
-      } catch {
-        addBotMessage("Sorry, I couldn't reach the AI right now. Please try again or visit our Help Center.")
-      }
+      setTimeout(() => {
+        const match = findBestResponse(trimmed)
+        if (match) {
+          addBotMessage(match.response, match.followUps)
+        } else {
+          const ctxKey = getContextKey(pathname, role)
+          const fallbackButtons = contextQuickReplies[ctxKey] ?? fallbackQuickReplies
+          addBotMessage(fallbackResponse, fallbackButtons)
+        }
+      }, 1000)
     },
-    [addBotMessage, messages],
+    [addBotMessage, pathname, role],
   )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -117,24 +168,36 @@ export function ChatbotWidget() {
       window.open("/contact", "_blank")
       return
     }
+    if (text === "Crisis resources") {
+      window.open("/crisis", "_blank")
+      return
+    }
+    if (text === "Take PHQ-9 assessment") {
+      window.open("/seeker/assessment", "_blank")
+      return
+    }
     handleSend(text)
   }
 
   return (
     <>
-      {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
         className={cn(
           "fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95",
           open && "scale-0 opacity-0",
+          showPulse && !open && "animate-pulse shadow-[0_0_0_0_rgba(0,0,0,0)]",
         )}
         aria-label="Open chat assistant"
       >
         <MessageCircle className="h-6 w-6" />
+        {showPulse && !open && (
+          <span className="absolute -top-1 -right-1 whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground shadow-lg">
+            Need help?
+          </span>
+        )}
       </button>
 
-      {/* Chat panel */}
       <div
         className={cn(
           "fixed bottom-0 right-0 z-50 flex flex-col bg-background shadow-2xl transition-all duration-300 ease-in-out overflow-hidden",
@@ -144,14 +207,13 @@ export function ChatbotWidget() {
             : "pointer-events-none h-0 w-0 translate-y-4 opacity-0",
         )}
       >
-        {/* Header */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+        <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 bg-primary/5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-            <Bot className="h-5 w-5 text-primary-foreground" />
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold">Harmony Assistant</p>
-            <p className="text-xs text-muted-foreground">I'm here to help</p>
+            <p className="text-xs text-muted-foreground">Here to help 💙</p>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -162,11 +224,13 @@ export function ChatbotWidget() {
           </button>
         </div>
 
-        {/* Messages */}
         <ScrollArea className="min-h-0 flex-1 px-4 py-4">
           <div className="space-y-4">
             {messages.map((msg) => (
-              <div key={msg.id}>
+              <div
+                key={msg.id}
+                className="animate-in fade-in slide-in-from-bottom-1 duration-300"
+              >
                 <div
                   className={cn(
                     "flex items-start gap-3",
@@ -182,7 +246,7 @@ export function ChatbotWidget() {
                     {msg.role === "user" ? (
                       <User className="h-4 w-4 text-primary-foreground" />
                     ) : (
-                      <Bot className="h-4 w-4 text-primary" />
+                      <Sparkles className="h-4 w-4 text-primary" />
                     )}
                   </div>
                   <div
@@ -196,14 +260,12 @@ export function ChatbotWidget() {
                     {msg.content}
                   </div>
                 </div>
-
               </div>
             ))}
 
-            {/* Quick reply suggestions on first message */}
-            {messages.length === 1 && messages[0].role === "bot" && (
-              <div className="ml-11 mt-2 flex flex-wrap gap-2">
-                {initialQuickReplies.map((text) => (
+            {messages.length > 0 && currentFollowUps.length > 0 && !isTyping && (
+              <div className="ml-11 mt-2 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                {currentFollowUps.map((text) => (
                   <button
                     key={text}
                     onClick={() => handleQuickReply(text)}
@@ -221,7 +283,6 @@ export function ChatbotWidget() {
           </div>
         </ScrollArea>
 
-        {/* Input */}
         <div className="shrink-0 border-t border-border p-3">
           <div className="flex items-center gap-2">
             <Input
