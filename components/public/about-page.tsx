@@ -5,29 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Heart, Users, Shield, Globe, ArrowRight } from "lucide-react"
 
-const team = [
-  {
-    name: "Dr. Yonas Alemayehu",
-    role: "Founder & CEO",
-    bio: "Clinical psychologist with 15+ years experience. Founded Harmony to make mental health accessible to all Ethiopians.",
-  },
-  {
-    name: "Meron Hailu",
-    role: "Head of Clinical Operations",
-    bio: "Licensed therapist passionate about quality care. Oversees counselor training and standards.",
-  },
-  {
-    name: "Dawit Bekele",
-    role: "Chief Technology Officer",
-    bio: "Former Google engineer. Built Harmony's secure platform from the ground up.",
-  },
-  {
-    name: "Sara Tesfaye",
-    role: "Head of User Experience",
-    bio: "Designs the Harmony experience with empathy and accessibility at the core.",
-  },
-]
-
 const values = [
   {
     icon: Heart,
@@ -117,58 +94,6 @@ export function AboutPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Team */}
-        <section className="bg-muted/30 py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">Our Leadership</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-              A dedicated team of mental health professionals, technologists, and advocates.
-            </p>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {team.map((member) => (
-                <Card key={member.name} className="border-border bg-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-muted">
-                      <img
-                        src={`/professional-portrait.png?height=80&width=80&query=professional portrait ${member.name}`}
-                        alt={member.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <h3 className="mt-4 font-semibold">{member.name}</h3>
-                    <p className="text-sm text-primary">{member.role}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{member.bio}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Stats */}
-        <section className="py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">150+</div>
-                <div className="mt-2 text-muted-foreground">Licensed Counselors</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">12,000+</div>
-                <div className="mt-2 text-muted-foreground">Sessions Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">8,000+</div>
-                <div className="mt-2 text-muted-foreground">Lives Touched</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary">4.8</div>
-                <div className="mt-2 text-muted-foreground">Average Rating</div>
-              </div>
             </div>
           </div>
         </section>

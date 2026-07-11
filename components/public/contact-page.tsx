@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { PageHeader } from "@/components/shared/page-header"
 import { PageFooter } from "@/components/shared/page-footer"
@@ -11,14 +9,51 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Mail, Phone, MapPin, Clock, CheckCircle } from "lucide-react"
+import { Mail, Phone, MapPin, Clock, CheckCircle, Loader2 } from "lucide-react"
 
 export function ContactPage() {
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [topic, setTopic] = useState("")
+  const [message, setMessage] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState("")
+  const [sending, setSending] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSending(true)
+    setError("")
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, topic, message }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to send message")
+      }
+
+      setSubmitted(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const resetForm = () => {
+    setFirstName("")
+    setLastName("")
+    setEmail("")
+    setTopic("")
+    setMessage("")
+    setSubmitted(false)
+    setError("")
   }
 
   return (
@@ -58,7 +93,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Phone</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">+251 11 234 5678</p>
+                    <p className="mt-1 text-sm text-muted-foreground">0962029518</p>
                   </div>
                 </div>
               </CardContent>
@@ -116,7 +151,7 @@ export function ContactPage() {
                     <p className="mt-2 text-muted-foreground">
                       Thank you for reaching out. We'll get back to you within 24 hours.
                     </p>
-                    <Button className="mt-6" onClick={() => setSubmitted(false)}>
+                    <Button className="mt-6" onClick={resetForm}>
                       Send Another Message
                     </Button>
                   </div>
@@ -125,22 +160,41 @@ export function ContactPage() {
                     <div className="grid gap-6 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" placeholder="Bereket" required />
+                        <Input
+                          id="firstName"
+                          placeholder="Bereket"
+                          required
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" placeholder="Tadesse" required />
+                        <Input
+                          id="lastName"
+                          placeholder="Tadesse"
+                          required
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="you@example.com" required />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="topic">What can we help with?</Label>
-                      <Select required>
+                      <Select required value={topic} onValueChange={setTopic}>
                         <SelectTrigger id="topic">
                           <SelectValue placeholder="Select a topic" />
                         </SelectTrigger>
@@ -157,11 +211,27 @@ export function ContactPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="message">Message</Label>
-                      <Textarea id="message" placeholder="Tell us how we can help..." rows={5} required />
+                      <Textarea
+                        id="message"
+                        placeholder="Tell us how we can help..."
+                        rows={5}
+                        required
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                      />
                     </div>
 
-                    <Button type="submit" className="w-full sm:w-auto">
-                      Send Message
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+
+                    <Button type="submit" className="w-full sm:w-auto" disabled={sending}>
+                      {sending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Message"
+                      )}
                     </Button>
                   </form>
                 )}

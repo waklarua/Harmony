@@ -20,6 +20,7 @@ import {
   Linkedin,
   Youtube,
   Database,
+  Mail,
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 import { formatCurrency } from "@/lib/format"
@@ -87,6 +88,13 @@ export function LandingPage() {
               <Shield className="h-4 w-4" />
               <span>Privacy & Security</span>
             </Link>
+            <Link
+              href="/contact"
+              className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/10 hover:text-foreground hover:shadow-md hover:shadow-primary/20"
+            >
+              <Mail className="h-4 w-4" />
+              <span>Contact Us</span>
+            </Link>
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
@@ -140,6 +148,9 @@ export function LandingPage() {
               </Link>
               <Link href="#privacy" className="text-sm text-muted-foreground">
                 Privacy & Security
+              </Link>
+              <Link href="/contact" className="text-sm text-muted-foreground">
+                Contact Us
               </Link>
               <div className="flex gap-3 pt-4">
                 {session ? (
