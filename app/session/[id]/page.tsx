@@ -41,6 +41,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   return (
     <SessionRoom
       sessionId={id}
+      otherUserId={data.otherUserId}
       counselorId={data.counselor?.id || ""}
       counselorName={data.counselor?.name || "Counselor"}
       counselorAvatar={data.counselor?.image}

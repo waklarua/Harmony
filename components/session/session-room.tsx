@@ -45,6 +45,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { sendMessage, getSessionEncryptionKey, endSession } from "@/app/actions/booking"
+import { markConversationAsRead } from "@/app/actions/messages"
 import { getSessionVideoInfo } from "@/app/actions/video"
 import { decryptMessage } from "@/lib/client-encryption"
 import { SessionNotesPanel } from "@/components/session/session-notes"
@@ -60,6 +61,7 @@ interface SystemMessage {
 
 interface SessionRoomProps {
   sessionId: string
+  otherUserId: string
   counselorId: string
   counselorName: string
   counselorAvatar?: string | null
@@ -331,6 +333,7 @@ export function ChatPanel({
 
 export function SessionRoom({
   sessionId,
+  otherUserId,
   counselorId,
   counselorName,
   counselorAvatar,
@@ -526,6 +529,7 @@ export function SessionRoom({
           },
         ]
       })
+      markConversationAsRead(otherUserId).catch(() => {})
     }
 
     privateChannel.bind("new-message", async (data: {
@@ -614,6 +618,7 @@ export function SessionRoom({
     setNewMessage("")
 
     sendMessage(sessionId, newMessage).catch(() => {})
+    markConversationAsRead(otherUserId).catch(() => {})
   }
 
   const handleEndSession = async () => {

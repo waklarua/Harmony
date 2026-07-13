@@ -100,6 +100,8 @@ export function SimpleChatRoom({
           },
         ]
       })
+      // Mark as read immediately when a message arrives while we're in the chat
+      markConversationAsRead(otherUserId).catch(() => {})
     }
 
     getSessionEncryptionKey(sessionId)
@@ -223,6 +225,8 @@ export function SimpleChatRoom({
     setNewMessage("")
 
     sendMessage(sessionId, newMessage).catch(() => {})
+    // Mark conversation as read (sender has read their own messages)
+    markConversationAsRead(otherUserId).catch(() => {})
   }
 
   return (
