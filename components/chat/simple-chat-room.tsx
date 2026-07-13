@@ -182,14 +182,14 @@ export function SimpleChatRoom({
         if (!data.messages) return
         setMessages((prev) => {
           const existing = new Set(prev.map((m) => m.id))
-          const newMsgs = data.messages.filter((m) => !existing.has(m.id))
+          const newMsgs = data.messages.filter((m) => m.senderId !== currentUserId && !existing.has(m.id))
           if (newMsgs.length === 0) return prev
           return [...prev, ...newMsgs]
         })
       } catch {}
     }, 10000)
     return () => clearInterval(interval)
-  }, [otherUserId])
+  }, [otherUserId, currentUserId])
 
   // Auto-scroll messages
   useEffect(() => {
