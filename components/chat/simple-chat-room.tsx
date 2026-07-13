@@ -76,22 +76,25 @@ export function SimpleChatRoom({
         return
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: data.id,
-          senderId: data.senderId,
-          senderName: otherName,
-          senderAvatar: otherAvatar || undefined,
-          content: decrypted,
-          timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone: "Africa/Addis_Ababa",
-          }) + " EAT",
-          isOwn: false,
-        },
-      ])
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev
+        return [
+          ...prev,
+          {
+            id: data.id,
+            senderId: data.senderId,
+            senderName: otherName,
+            senderAvatar: otherAvatar || undefined,
+            content: decrypted,
+            timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              timeZone: "Africa/Addis_Ababa",
+            }) + " EAT",
+            isOwn: false,
+          },
+        ]
+      })
     }
 
     getSessionEncryptionKey(sessionId)

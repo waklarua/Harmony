@@ -486,22 +486,25 @@ export function SessionRoom({
         return
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: data.id,
-          senderId: data.senderId,
-          senderName: counselorName,
-          senderAvatar: counselorAvatar || undefined,
-          content: decrypted,
-          timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone: "Africa/Addis_Ababa",
-          }) + " EAT",
-          isOwn: false,
-        },
-      ])
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev
+        return [
+          ...prev,
+          {
+            id: data.id,
+            senderId: data.senderId,
+            senderName: counselorName,
+            senderAvatar: counselorAvatar || undefined,
+            content: decrypted,
+            timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              timeZone: "Africa/Addis_Ababa",
+            }) + " EAT",
+            isOwn: false,
+          },
+        ]
+      })
     }
 
     privateChannel.bind("new-message", async (data: {
@@ -583,7 +586,10 @@ export function SessionRoom({
       isOwn: true,
     }
 
-    setMessages((prev) => [...prev, msg])
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      return [...prev, msg]
+    })
     setNewMessage("")
 
     sendMessage(sessionId, newMessage).catch(() => {})
