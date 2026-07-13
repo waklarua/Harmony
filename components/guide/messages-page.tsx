@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { GuideLayout } from "./guide-layout"
 import Link from "next/link"
 import { Search, MessageCircle } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
+import Pusher from "pusher-js"
 
 interface Message {
   id: string
@@ -23,10 +24,11 @@ interface Message {
   status: "active" | "archived"
 }
 
-export function GuideMessagesPage({ conversations = [] }: { conversations?: Message[] }) {
+export function GuideMessagesPage({ conversations = [], currentUserId }: { conversations?: Message[]; currentUserId: string }) {
   const router = useRouter()
-  const activeMessages = conversations.filter((m) => m.status === "active")
-  const archivedMessages = conversations.filter((m) => m.status === "archived")
+  const [items, setItems] = useState(conversations)
+  const activeMessages = items.filter((m) => m.status === "active")
+  const archivedMessages = items.filter((m) => m.status === "archived")
   const unreadCount = activeMessages.reduce((sum, m) => sum + m.unread, 0)
 
   // Re-fetch conversations when tab becomes visible (e.g. returning from chat)
@@ -37,6 +39,55 @@ export function GuideMessagesPage({ conversations = [] }: { conversations?: Mess
     document.addEventListener("visibilitychange", handleVisibility)
     return () => document.removeEventListener("visibilitychange", handleVisibility)
   }, [router])
+
+  // Subscribe to Pusher channels for real-time unread count updates
+  useEffect(() => {
+    const pk = process.env.NEXT_PUBLIC_PUSHER_KEY
+    const pc = process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+    if (!pk || !pc || !currentUserId) return
+
+    const pusherClient = new Pusher(pk, {
+      cluster: pc,
+      channelAuthorization: {
+        endpoint: "/api/pusher/auth",
+        transport: "ajax",
+      },
+    })
+
+    const convos = conversations.filter((m) => m.status === "active")
+    const subs = convos.map((conv) => {
+      const channel = pusherClient.subscribe(`private-session-${conv.id}`)
+      channel.bind("new-message", (data: { id: string; senderId: string; content: string; createdAt: string }) => {
+        if (data.senderId === currentUserId) return
+        setItems((prev) =>
+          prev.map((c) =>
+            c.id === conv.id
+              ? {
+                  ...c,
+                  unread: c.unread + 1,
+                  lastMessage: data.content,
+                  timestamp: (() => {
+                    const diff = Date.now() - new Date(data.createdAt).getTime()
+                    const hours = Math.floor(diff / 3600000)
+                    const days = Math.floor(hours / 24)
+                    return hours < 1 ? "Just now" : hours < 24 ? `${hours}h ago` : `${days}d ago`
+                  })(),
+                }
+              : c,
+          ),
+        )
+      })
+      return channel
+    })
+
+    return () => {
+      for (const ch of subs) {
+        ch.unbind_all()
+        ch.unsubscribe()
+      }
+      pusherClient.disconnect()
+    }
+  }, [currentUserId, conversations])
 
   return (
     <GuideLayout>
