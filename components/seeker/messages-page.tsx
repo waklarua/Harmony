@@ -66,7 +66,6 @@ export function MessagesPage({ conversations = [], currentUserId }: { conversati
               ? {
                   ...c,
                   unread: c.unread + 1,
-                  lastMessage: data.content,
                   timestamp: (() => {
                     const diff = Date.now() - new Date(data.createdAt).getTime()
                     const hours = Math.floor(diff / 3600000)
