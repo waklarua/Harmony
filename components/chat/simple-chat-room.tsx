@@ -47,17 +47,62 @@ export function SimpleChatRoom({
   const [showNotes, setShowNotes] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const encKeyRef = useRef<string | null>(null)
+  const pendingMessagesRef = useRef<Array<{
+    id: string
+    senderId: string
+    content: string
+    iv: string
+    createdAt: string
+  }>>([])
 
   // Fetch encryption key and subscribe to Pusher
   useEffect(() => {
     let pusherClient: Pusher | null = null
     let channel: ReturnType<Pusher["subscribe"]> | null = null
 
+    const processIncomingMessage = async (data: {
+      id: string
+      senderId: string
+      content: string
+      iv: string
+      createdAt: string
+    }) => {
+      if (!encKeyRef.current) return
+      let decrypted: string
+      try {
+        decrypted = await decryptMessage(data.content, data.iv, encKeyRef.current)
+      } catch (err) {
+        console.error("[chat] decrypt failed:", err)
+        return
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          senderId: data.senderId,
+          senderName: otherName,
+          senderAvatar: otherAvatar || undefined,
+          content: decrypted,
+          timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "Africa/Addis_Ababa",
+          }) + " EAT",
+          isOwn: false,
+        },
+      ])
+    }
+
     getSessionEncryptionKey(sessionId)
       .then(({ key }) => {
         encKeyRef.current = key
+        const pending = pendingMessagesRef.current.splice(0)
+        for (const data of pending) {
+          processIncomingMessage(data)
+        }
       })
-      .catch(() => {})
+      .catch((err) => console.error("[chat] encryption key fetch failed:", err))
 
     const pk = process.env.NEXT_PUBLIC_PUSHER_KEY
     const pc = process.env.NEXT_PUBLIC_PUSHER_CLUSTER
@@ -82,31 +127,13 @@ export function SimpleChatRoom({
       createdAt: string
     }) => {
       if (data.senderId === currentUserId) return
-      if (!encKeyRef.current) return
 
-      let decrypted: string
-      try {
-        decrypted = await decryptMessage(data.content, data.iv, encKeyRef.current)
-      } catch {
+      if (!encKeyRef.current) {
+        pendingMessagesRef.current.push(data)
         return
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: data.id,
-          senderId: data.senderId,
-          senderName: otherName,
-          senderAvatar: otherAvatar || undefined,
-          content: decrypted,
-          timestamp: new Date(data.createdAt).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone: "Africa/Addis_Ababa",
-          }) + " EAT",
-          isOwn: false,
-        },
-      ])
+      await processIncomingMessage(data)
     })
 
     return () => {

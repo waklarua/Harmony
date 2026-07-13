@@ -365,6 +365,13 @@ export function SessionRoom({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const encKeyRef = useRef<string | null>(null)
   const pusherRef = useRef<Pusher | null>(null)
+  const pendingMessagesRef = useRef<Array<{
+    id: string
+    senderId: string
+    content: string
+    iv: string
+    createdAt: string
+  }>>([])
 
   const formatTimestamp = useCallback(() => {
     return (
@@ -408,8 +415,12 @@ export function SessionRoom({
     getSessionEncryptionKey(sessionId)
       .then(({ key }) => {
         encKeyRef.current = key
+        const pending = pendingMessagesRef.current.splice(0)
+        for (const data of pending) {
+          processIncomingMessage(data)
+        }
       })
-      .catch(() => {})
+      .catch((err) => console.error("[session] encryption key fetch failed:", err))
 
     const pk = process.env.NEXT_PUBLIC_PUSHER_KEY
     const pc = process.env.NEXT_PUBLIC_PUSHER_CLUSTER
@@ -459,20 +470,19 @@ export function SessionRoom({
     // Subscribe to private channel for real-time messages (sendMessage fires on private-session-{id})
     privateChannel = pusherClient.subscribe(`private-session-${sessionId}`)
 
-    privateChannel.bind("new-message", async (data: {
+    const processIncomingMessage = async (data: {
       id: string
       senderId: string
       content: string
       iv: string
       createdAt: string
     }) => {
-      if (data.senderId === currentUserId) return
-
       if (!encKeyRef.current) return
       let decrypted: string
       try {
         decrypted = await decryptMessage(data.content, data.iv, encKeyRef.current)
-      } catch {
+      } catch (err) {
+        console.error("[session] decrypt failed:", err)
         return
       }
 
@@ -492,6 +502,23 @@ export function SessionRoom({
           isOwn: false,
         },
       ])
+    }
+
+    privateChannel.bind("new-message", async (data: {
+      id: string
+      senderId: string
+      content: string
+      iv: string
+      createdAt: string
+    }) => {
+      if (data.senderId === currentUserId) return
+
+      if (!encKeyRef.current) {
+        pendingMessagesRef.current.push(data)
+        return
+      }
+
+      await processIncomingMessage(data)
     })
 
     return () => {
