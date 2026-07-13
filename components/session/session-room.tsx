@@ -429,10 +429,27 @@ export function SessionRoom({
 
     pusherClient = new Pusher(pk, {
       cluster: pc,
-      channelAuthorization: {
-        endpoint: "/api/pusher/auth",
-        transport: "ajax",
-      },
+      authorizer: (channel) => ({
+        authorize: (socketId, callback) => {
+          fetch("/api/pusher/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `socket_id=${socketId}&channel_name=${channel.name}`,
+          })
+            .then(async (res) => {
+              if (!res.ok) {
+                const text = await res.text()
+                throw new Error(`auth ${res.status}: ${text}`)
+              }
+              return res.json()
+            })
+            .then((data) => callback(null, data))
+            .catch((err) => {
+              console.error("[pusher/client] authorizer error for", channel.name, ":", err)
+              callback(err, null)
+            })
+        },
+      }),
     })
     pusherRef.current = pusherClient
 
@@ -441,9 +458,6 @@ export function SessionRoom({
     })
 
     presenceChannel = pusherClient.subscribe(`presence-session-${sessionId}`)
-    presenceChannel.bind("pusher:subscription_error", (statusCode: number) => {
-      console.error("[pusher/client] subscription_error on", presenceChannel.name, "status:", statusCode)
-    })
 
     presenceChannel.bind("pusher:subscription_succeeded", (members: { members: Record<string, { id: string; info: { name: string; avatar: string } }> }) => {
       const otherIds = Object.keys(members.members).filter((id) => id !== currentUserId)
@@ -476,9 +490,6 @@ export function SessionRoom({
 
     // Subscribe to private channel for real-time messages (sendMessage fires on private-session-{id})
     privateChannel = pusherClient.subscribe(`private-session-${sessionId}`)
-    privateChannel.bind("pusher:subscription_error", (statusCode: number) => {
-      console.error("[pusher/client] subscription_error on", privateChannel.name, "status:", statusCode)
-    })
 
     const processIncomingMessage = async (data: {
       id: string

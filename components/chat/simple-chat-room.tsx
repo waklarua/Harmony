@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronLeft, Lock, FileText, X } from "lucide-react"
 import { sendMessage, getSessionEncryptionKey } from "@/app/actions/booking"
-import { markConversationAsRead } from "@/app/actions/messages"
+import { markConversationAsRead, getAllMessagesBetween } from "@/app/actions/messages"
 import { decryptMessage } from "@/lib/client-encryption"
 import { ChatPanel } from "@/components/session/session-room"
 import { SessionNotesPanel } from "@/components/session/session-notes"
@@ -119,10 +119,27 @@ export function SimpleChatRoom({
 
     pusherClient = new Pusher(pk, {
       cluster: pc,
-      channelAuthorization: {
-        endpoint: "/api/pusher/auth",
-        transport: "ajax",
-      },
+      authorizer: (channel) => ({
+        authorize: (socketId, callback) => {
+          fetch("/api/pusher/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `socket_id=${socketId}&channel_name=${channel.name}`,
+          })
+            .then(async (res) => {
+              if (!res.ok) {
+                const text = await res.text()
+                throw new Error(`auth ${res.status}: ${text}`)
+              }
+              return res.json()
+            })
+            .then((data) => callback(null, data))
+            .catch((err) => {
+              console.error("[pusher/client] authorizer error for", channel.name, ":", err)
+              callback(err, null)
+            })
+        },
+      }),
     })
 
     pusherClient.connection.bind("error", (err: any) => {
@@ -130,9 +147,6 @@ export function SimpleChatRoom({
     })
 
     channel = pusherClient.subscribe(`private-session-${sessionId}`)
-    channel.bind("pusher:subscription_error", (statusCode: number) => {
-      console.error("[pusher/client] subscription_error on", channel.name, "status:", statusCode)
-    })
 
     channel.bind("new-message", async (data: {
       id: string
@@ -160,15 +174,27 @@ export function SimpleChatRoom({
     }
   }, [sessionId, otherName, otherAvatar, currentUserId])
 
+  // Polling fallback for messages (10s interval)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await getAllMessagesBetween(otherUserId)
+        if (!data.messages) return
+        setMessages((prev) => {
+          const existing = new Set(prev.map((m) => m.id))
+          const newMsgs = data.messages.filter((m) => !existing.has(m.id))
+          if (newMsgs.length === 0) return prev
+          return [...prev, ...newMsgs]
+        })
+      } catch {}
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [otherUserId])
+
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
-
-  // Mark messages as read on mount
-  useEffect(() => {
-    markConversationAsRead(otherUserId).catch(() => {})
-  }, [otherUserId])
 
   const formatTimestamp = () => {
     return (
