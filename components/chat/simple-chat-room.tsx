@@ -55,6 +55,11 @@ export function SimpleChatRoom({
     createdAt: string
   }>>([])
 
+  // Mark messages from other user as read on mount
+  useEffect(() => {
+    markConversationAsRead(otherUserId).catch(() => {})
+  }, [otherUserId])
+
   // Fetch encryption key and subscribe to Pusher
   useEffect(() => {
     let pusherClient: Pusher | null = null

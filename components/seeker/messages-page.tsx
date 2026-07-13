@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -22,9 +24,19 @@ interface Message {
 }
 
 export function MessagesPage({ conversations = [] }: { conversations?: Message[] }) {
+  const router = useRouter()
   const activeMessages = conversations.filter((m) => m.status === "active")
   const archivedMessages = conversations.filter((m) => m.status === "archived")
   const unreadCount = activeMessages.reduce((sum, m) => sum + m.unread, 0)
+
+  // Re-fetch conversations when tab becomes visible (e.g. returning from chat)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") router.refresh()
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => document.removeEventListener("visibilitychange", handleVisibility)
+  }, [router])
 
   return (
     <SeekerLayout>
