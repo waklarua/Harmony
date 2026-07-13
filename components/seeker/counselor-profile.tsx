@@ -62,6 +62,7 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [isBooking, setIsBooking] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [isFullyBooked, setIsFullyBooked] = useState<boolean | null>(null)
@@ -143,9 +144,14 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
         paymentReference: reference,
         paymentMethod: method,
       })
-      setShowPayment(false)
-      router.push("/seeker/dashboard")
-      router.refresh()
+      setIsBooking(false)
+      setPaymentSuccess(true)
+      setTimeout(() => {
+        setShowPayment(false)
+        setPaymentSuccess(false)
+        router.push("/seeker/dashboard")
+        router.refresh()
+      }, 1500)
     } catch (err: any) {
       setBookingError(err?.message || "Failed to book session. Please try again.")
       setIsBooking(false)
@@ -480,9 +486,12 @@ export function CounselorProfile({ counselor }: CounselorProfileProps) {
         open={showPayment}
         onOpenChange={setShowPayment}
         amount={counselor.hourlyRate}
-            counselorName={counselor.name}
+        counselorName={counselor.name}
         sessionDate={pendingBooking?.date || ""}
         sessionTime={pendingBooking?.time || ""}
+        isBooking={isBooking}
+        bookingError={bookingError}
+        paymentSuccess={paymentSuccess}
         onConfirm={handlePaymentConfirm}
       />
     </SeekerLayout>

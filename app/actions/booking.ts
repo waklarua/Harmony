@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { booking, message, user, scheduleSlot } from '@/lib/db/schema'
-import { eq, and, asc, desc, or, sql } from 'drizzle-orm'
+import { eq, and, asc, desc, or, sql, ne } from 'drizzle-orm'
 import { getUserId } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt, deriveKeyBase64 } from '@/lib/encryption'
@@ -12,6 +12,7 @@ import { sendEmail } from '@/lib/email'
 import { addEarning } from './earnings'
 import { notifyNextInLine } from './waitlist'
 import { createVideoRoom } from './video'
+import { verifyPayment } from '@/lib/verify-payment'
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
@@ -76,6 +77,40 @@ export async function createBooking(data: {
 
   if (existing) {
     throw new Error('This time slot is already booked. Please choose another time.')
+  }
+
+  if (data.paymentReference && data.paymentMethod) {
+    const ref = data.paymentReference.trim().toUpperCase()
+
+    const [existingRef] = await db
+      .select({ id: booking.id })
+      .from(booking)
+      .where(
+        and(
+          eq(booking.paymentReference, ref),
+          ne(booking.status, 'cancelled'),
+        )
+      )
+      .limit(1)
+
+    if (existingRef) {
+      throw new Error('This payment reference has already been used for another booking.')
+    }
+
+    const verification = await verifyPayment(
+      data.paymentMethod as "telebirr" | "cbe_birr",
+      ref,
+    )
+
+    if (!verification.verified) {
+      throw new Error(verification.error || 'Payment verification failed. Please check your reference number.')
+    }
+
+    if (verification.amount && data.amount && verification.amount < data.amount) {
+      throw new Error(
+        `Payment amount mismatch: expected at least ${data.amount} ETB but receipt shows ${verification.amount} ETB.`,
+      )
+    }
   }
 
   // If the slot has already started, shift to current time (full 1 hour from now)

@@ -162,7 +162,7 @@ export function SeekerLayout({ children }: { children: React.ReactNode }) {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
-                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
+                      <AvatarFallback suppressHydrationWarning>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
@@ -170,7 +170,7 @@ export function SeekerLayout({ children }: { children: React.ReactNode }) {
                   <div className="flex items-center gap-2 p-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
-                      <AvatarFallback>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
+                      <AvatarFallback suppressHydrationWarning>{(session?.user?.name || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{session?.user?.name || "User"}</span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CheckCircle2, Loader2, Smartphone, Building2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2, Smartphone, Building2 } from "lucide-react"
 import { formatCurrency } from "@/lib/format"
 
 interface PaymentModalProps {
@@ -20,11 +20,14 @@ interface PaymentModalProps {
   counselorName: string
   sessionDate: string
   sessionTime: string
+  isBooking: boolean
+  bookingError: string | null
+  paymentSuccess: boolean
   onConfirm: (method: string, reference: string) => void
 }
 
 const PAYMENT_METHODS = [
-  { id: "telebirr", name: "Telebirr", account: "0962029518", icon: Smartphone },
+  { id: "telebirr", name: "Telebirr", account: "0913499704", icon: Smartphone },
   { id: "cbe_birr", name: "CBE Birr", account: "100068686251", icon: Building2 },
 ] as const
 
@@ -35,29 +38,38 @@ export function PaymentModal({
   counselorName,
   sessionDate,
   sessionTime,
+  isBooking,
+  bookingError,
+  paymentSuccess,
   onConfirm,
 }: PaymentModalProps) {
   const [method, setMethod] = useState<string | null>(null)
   const [reference, setReference] = useState("")
-  const [step, setStep] = useState<"filling" | "processing" | "success">("filling")
+  const [step, setStep] = useState<"filling" | "processing">("filling")
 
   const selectedMethod = PAYMENT_METHODS.find((m) => m.id === method)
 
   const handleConfirm = useCallback(async () => {
     if (!method || !reference.trim()) return
     setStep("processing")
-    await new Promise((r) => setTimeout(r, 1500))
-    setStep("success")
-    setTimeout(() => {
-      onConfirm(method, reference.trim())
-    }, 800)
+    onConfirm(method, reference.trim())
   }, [method, reference, onConfirm])
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open && step === "success") {
-      onOpenChange(false)
-      return
+  useEffect(() => {
+    if (bookingError && step === "processing") {
+      setStep("filling")
     }
+  }, [bookingError, step])
+
+  useEffect(() => {
+    if (open) {
+      setStep("filling")
+      setMethod(null)
+      setReference("")
+    }
+  }, [open])
+
+  const handleOpenChange = (open: boolean) => {
     if (!open && step === "processing") return
     if (!open) {
       setMethod(null)
@@ -70,7 +82,7 @@ export function PaymentModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
-        {step === "filling" && (
+        {step === "filling" && !isBooking && (
           <>
             <DialogHeader>
               <DialogTitle>Payment</DialogTitle>
@@ -127,6 +139,13 @@ export function PaymentModal({
               </div>
             )}
 
+            {bookingError && (
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{bookingError}</p>
+              </div>
+            )}
+
             <Button
               className="w-full"
               size="lg"
@@ -138,19 +157,19 @@ export function PaymentModal({
           </>
         )}
 
-        {step === "processing" && (
+        {paymentSuccess && (
           <div className="flex flex-col items-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg font-medium">Processing payment...</p>
-            <p className="mt-1 text-sm text-muted-foreground">Please wait while we confirm your payment</p>
+            <CheckCircle2 className="h-12 w-12 text-green-500" />
+            <p className="mt-4 text-lg font-medium">Payment successful!</p>
+            <p className="mt-1 text-sm text-muted-foreground">Redirecting to dashboard...</p>
           </div>
         )}
 
-        {step === "success" && (
+        {!paymentSuccess && (step === "processing" || isBooking) && (
           <div className="flex flex-col items-center py-12">
-            <CheckCircle2 className="h-16 w-16 text-green-500" />
-            <p className="mt-4 text-xl font-bold">Payment successful!</p>
-            <p className="mt-1 text-sm text-muted-foreground">Your session has been booked</p>
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-lg font-medium">Verifying payment...</p>
+            <p className="mt-1 text-sm text-muted-foreground">Checking your payment with the bank</p>
           </div>
         )}
       </DialogContent>
