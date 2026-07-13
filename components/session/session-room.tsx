@@ -436,7 +436,14 @@ export function SessionRoom({
     })
     pusherRef.current = pusherClient
 
+    pusherClient.connection.bind("error", (err: any) => {
+      console.error("[pusher/client] connection error:", err)
+    })
+
     presenceChannel = pusherClient.subscribe(`presence-session-${sessionId}`)
+    presenceChannel.bind("pusher:subscription_error", (statusCode: number) => {
+      console.error("[pusher/client] subscription_error on", presenceChannel.name, "status:", statusCode)
+    })
 
     presenceChannel.bind("pusher:subscription_succeeded", (members: { members: Record<string, { id: string; info: { name: string; avatar: string } }> }) => {
       const otherIds = Object.keys(members.members).filter((id) => id !== currentUserId)
@@ -469,6 +476,9 @@ export function SessionRoom({
 
     // Subscribe to private channel for real-time messages (sendMessage fires on private-session-{id})
     privateChannel = pusherClient.subscribe(`private-session-${sessionId}`)
+    privateChannel.bind("pusher:subscription_error", (statusCode: number) => {
+      console.error("[pusher/client] subscription_error on", privateChannel.name, "status:", statusCode)
+    })
 
     const processIncomingMessage = async (data: {
       id: string

@@ -125,7 +125,14 @@ export function SimpleChatRoom({
       },
     })
 
+    pusherClient.connection.bind("error", (err: any) => {
+      console.error("[pusher/client] connection error:", err)
+    })
+
     channel = pusherClient.subscribe(`private-session-${sessionId}`)
+    channel.bind("pusher:subscription_error", (statusCode: number) => {
+      console.error("[pusher/client] subscription_error on", channel.name, "status:", statusCode)
+    })
 
     channel.bind("new-message", async (data: {
       id: string

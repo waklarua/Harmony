@@ -278,7 +278,7 @@ export async function startSession(bookingId: string) {
   pusher.trigger(`presence-session-${bookingId}`, 'session-started', {
     startedAt: now.toISOString(),
     startedBy: userId,
-  }).catch((err) => console.error('[pusher] trigger failed:', err))
+  }).catch((err) => console.error('[pusher] trigger failed on presence-session-' + bookingId + ':', err))
 
   await createVideoRoom(bookingId).catch((err) => console.error('[video] room creation failed:', err))
 
@@ -334,7 +334,7 @@ export async function endSession(bookingId: string) {
   pusher.trigger(`presence-session-${bookingId}`, 'session-ended', {
     endedAt: now.toISOString(),
     endedBy: userId,
-  }).catch((err) => console.error('[pusher] trigger failed:', err))
+  }).catch((err) => console.error('[pusher] trigger failed on presence-session-' + bookingId + ':', err))
 
   const otherId = bk.seekerId === userId ? bk.counselorId : bk.seekerId
   await createNotification(
@@ -419,7 +419,7 @@ export async function sendMessage(bookingId: string, content: string) {
     content: ciphertext,
     iv,
     createdAt: new Date().toISOString(),
-  }).catch((err) => console.error('[pusher] trigger failed:', err))
+  }).catch((err) => console.error('[pusher] trigger failed on private-session-' + bookingId + ':', err))
 
   revalidatePath(`/session/${bookingId}`)
   return { ...newMessage[0], content }
