@@ -269,7 +269,7 @@ export function LandingPage() {
             >
               <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                 Your path to better{" "}
-                <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                <span className="text-primary">
                   mental well-being
                 </span>
                 <br />

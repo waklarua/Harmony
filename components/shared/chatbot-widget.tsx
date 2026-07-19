@@ -213,7 +213,7 @@ export function ChatbotWidget() {
         >
           <MessageCircle className="h-5 w-5" />
         </motion.span>
-        <span className="pr-4 text-sm font-semibold tracking-wide">AI Assistant</span>
+        <span className="pr-4 text-sm font-medium">AI Assistant</span>
         <motion.span
           className="absolute -inset-1 rounded-full bg-primary"
           animate={{ opacity: [0.3, 0.6, 0.3] }}
