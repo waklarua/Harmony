@@ -1,107 +1,103 @@
 import { NextResponse } from "next/server"
+import OpenAI from "openai"
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+const SYSTEM_PROMPT = `You are Harmony, a compassionate mental health support assistant for a counseling platform based in Ethiopia. Your role is to provide empathetic, helpful responses that encourage users to seek professional counseling.
 
-const MODELS = [
-  "mistralai/mistral-7b-instruct:free",
-  "openchat/openchat-7b:free",
-  "gryphe/mythomist-7b:free",
-  "undi95/toppy-m-7b:free",
-  "tencent/hy3:free",
-]
-
-const SYSTEM_PROMPT = `You are the Harmony support assistant, a friendly and helpful chatbot for Harmony — an Ethiopian mental health counseling platform.
-
-Here are the key facts about Harmony:
-- Harmony connects people with licensed counselors in Ethiopia for mental health support
-- Sessions are conducted via Jitsi Meet (video, voice, or chat), no download required
+Key facts about Harmony:
+- Connects people with licensed counselors in Ethiopia for mental health support
+- Sessions via Jitsi Meet (video, voice, or chat), no download required
 - Payment methods: Telebirr and CBE Birr only (Ethiopian Birr)
 - Counselors earn 80% of their hourly rate, platform takes 20% commission
-- All times are in East Africa Time (EAT, UTC+3)
-- Support email: support@harmonyhealth.et, Phone: 0962029518
+- All times in East Africa Time (EAT, UTC+3)
+- Support email: support@harmonyhealth.et
 - Office: Bole Road, Addis Ababa, Ethiopia
-- Business hours: Mon-Fri 8AM-6PM, Sat 9AM-1PM (EAT)
-- Counselors must be verified licensed professionals in Ethiopia
-- Clients can browse counselors, filter by specialty, check availability, and book sessions
 - Cancellation policy: free cancellation up to 24 hours before session
 - All communications are end-to-end encrypted
-- Users can request data export or account deletion
 
 Guidelines:
-- Keep answers concise and friendly (2-4 short paragraphs max)
-- If someone is in crisis, tell them to call 8083 or 116 immediately, and visit the Crisis Resources page
-- Never make up features — if you don't know something, suggest they check the Help Center or contact support
-- Use Ethiopian context naturally (mention Birr, Telebirr, CBE Birr, EAT timezone, Addis Ababa where relevant)
-- Be warm and encouraging — mental health support should feel safe and welcoming`
+- Be warm, conversational, and encouraging — mental health support should feel safe
+- Keep answers concise (2-4 short paragraphs max)
+- Use Ethiopian context naturally (Birr, Telebirr, CBE Birr, EAT, Addis Ababa)
+- Never diagnose conditions or prescribe treatment
+- Always suggest speaking with a licensed counselor for serious concerns
+- If someone mentions suicide, self-harm, or crisis, give crisis resources immediately
+- If you don't know something, suggest the Help Center or contacting support
+- Reference the conversation history naturally when following up`
 
-async function tryModel(model: string, messages: { role: string; content: string }[]) {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://v0-harmony-h3.vercel.app",
-      "X-Title": "Harmony",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 500,
-    }),
-  })
+const CRISIS_KEYWORDS = [
+  "suicide", "kill myself", "hurt myself", "self-harm", "want to die",
+  "end my life", "not safe", "emergency", "crisis", "8083", "116",
+  "breakdown", "cant cope", "dont want to live", "need help now",
+  "urgent help", "struggling badly",
+]
 
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => "unknown")
-    let isRateLimit = false
-    try {
-      const parsed = JSON.parse(errBody)
-      if (parsed?.error?.code === 429) isRateLimit = true
-    } catch {}
-    return { isRateLimit, error: `Model ${model} failed (${res.status}): ${errBody}` }
+const CRISIS_RESPONSE = `I'm really glad you reached out. You are not alone, and help is available right now in Ethiopia.
+
+• Emergency Hotline: **8083** (toll-free, 24/7)
+• Mental Health Helpline: **116** (toll-free, 24/7)
+
+Please call one of those numbers right now to speak with someone who can help.
+
+You can also visit our Crisis Resources page for more support options.`
+
+let openai: OpenAI | null = null
+
+function getClient(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.NVIDIA_API_KEY,
+      baseURL: "https://integrate.api.nvidia.com/v1",
+    })
   }
-
-  const data = await res.json()
-  const text = data?.choices?.[0]?.message?.content ?? null
-  return { text }
+  return openai
 }
 
 export async function POST(request: Request) {
   try {
-    const { message, history } = await request.json()
+    const { messages } = await request.json()
 
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message is required." }, { status: 400 })
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "Messages are required." }, { status: 400 })
     }
 
-    if (!OPENROUTER_API_KEY) {
+    const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || ""
+    const isCrisis = CRISIS_KEYWORDS.some((kw) => lastMsg.includes(kw))
+
+    if (isCrisis) {
+      return NextResponse.json({ response: CRISIS_RESPONSE })
+    }
+
+    const apiKey = process.env.NVIDIA_API_KEY
+    if (!apiKey) {
       return NextResponse.json({ error: "API key not configured." }, { status: 500 })
     }
 
-    const messages = [{ role: "system", content: SYSTEM_PROMPT }]
+    const recentMessages = messages.slice(-10)
 
-    if (Array.isArray(history)) {
-      for (const msg of history) {
-        if (msg.role === "user" || msg.role === "assistant") {
-          messages.push({ role: msg.role, content: msg.content })
-        }
-      }
+    const apiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...recentMessages.map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+    ]
+
+    const client = getClient()
+    const completion = await client.chat.completions.create({
+      model: "deepseek-ai/deepseek-v4-pro",
+      messages: apiMessages,
+      temperature: 0.7,
+      top_p: 0.95,
+      max_tokens: 1024,
+    })
+
+    const reply = completion.choices[0]?.message?.content
+
+    if (!reply) {
+      return NextResponse.json({ error: "Empty response from AI." }, { status: 502 })
     }
 
-    messages.push({ role: "user", content: message })
-
-    for (const model of MODELS) {
-      const result = await tryModel(model, messages)
-      if ("text" in result && result.text) {
-        return NextResponse.json({ response: result.text })
-      }
-      if (!result.isRateLimit) {
-        console.error(result.error)
-        return NextResponse.json({ error: "AI service error." }, { status: 502 })
-      }
-      console.warn(`Rate limited on ${model}, trying next model...`)
-    }
-
-    return NextResponse.json({ error: "All models are rate-limited. Try again later." }, { status: 503 })
+    return NextResponse.json({ response: reply })
   } catch (err) {
     console.error("Chat API error:", err)
     return NextResponse.json({ error: "Internal server error." }, { status: 500 })

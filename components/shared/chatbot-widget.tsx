@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usePathname } from "next/navigation"
+import { motion } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,18 +11,16 @@ import { MessageCircle, X, Send, Sparkles, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
 import {
-  initialQuickReplies,
   crisisKeywords,
   crisisResponse,
-  findBestResponse,
   contextQuickReplies,
-  fallbackQuickReplies,
   fallbackResponse,
+  fallbackQuickReplies,
 } from "@/lib/chatbot-responses"
 
 interface Message {
   id: string
-  role: "user" | "bot"
+  role: "user" | "assistant" | "bot"
   content: string
 }
 
@@ -73,7 +72,6 @@ export function ChatbotWidget() {
   const [isTyping, setIsTyping] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
   const [currentFollowUps, setCurrentFollowUps] = useState<string[]>([])
-  const [showPulse, setShowPulse] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -104,12 +102,6 @@ export function ChatbotWidget() {
     }
   }, [open])
 
-  useEffect(() => {
-    if (open || hasOpened) return
-    const timer = setTimeout(() => setShowPulse(true), 30000)
-    return () => clearTimeout(timer)
-  }, [open, hasOpened])
-
   const addBotMessage = useCallback((content: string, followUps?: string[]) => {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "bot", content }])
     setIsTyping(false)
@@ -117,39 +109,61 @@ export function ChatbotWidget() {
     else setCurrentFollowUps([])
   }, [])
 
+  const addUserMessage = useCallback((text: string) => {
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: text }])
+  }, [])
+
   const handleSend = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const trimmed = text.trim()
       if (!trimmed) return
       setCurrentFollowUps([])
+      setInput("")
 
       const lower = trimmed.toLowerCase()
       const isCrisis = crisisKeywords.some((kw) => lower.includes(kw))
 
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: trimmed }])
-      setInput("")
+      addUserMessage(trimmed)
 
       if (isCrisis) {
         setIsTyping(true)
         setTimeout(() => {
           addBotMessage(crisisResponse.response, crisisResponse.followUps)
-        }, 1000)
+        }, 500)
         return
       }
 
       setIsTyping(true)
-      setTimeout(() => {
-        const match = findBestResponse(trimmed)
-        if (match) {
-          addBotMessage(match.response, match.followUps)
-        } else {
-          const ctxKey = getContextKey(pathname, role)
-          const fallbackButtons = contextQuickReplies[ctxKey] ?? fallbackQuickReplies
-          addBotMessage(fallbackResponse, fallbackButtons)
+
+      try {
+        const chatHistory = messages.map((m) => ({
+          role: m.role === "bot" ? "assistant" : "user",
+          content: m.content,
+        }))
+        chatHistory.push({ role: "user", content: trimmed })
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: chatHistory }),
+        })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.error || "API error")
         }
-      }, 1000)
+
+        const ctxKey = getContextKey(pathname, role)
+        const followUps = contextQuickReplies[ctxKey] ?? fallbackQuickReplies
+        addBotMessage(data.response, followUps)
+      } catch {
+        const ctxKey = getContextKey(pathname, role)
+        const fallbackButtons = contextQuickReplies[ctxKey] ?? fallbackQuickReplies
+        addBotMessage(fallbackResponse, fallbackButtons)
+      }
     },
-    [addBotMessage, pathname, role],
+    [addBotMessage, addUserMessage, messages, pathname, role],
   )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -181,22 +195,32 @@ export function ChatbotWidget() {
 
   return (
     <>
-      <button
+      <motion.button
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95",
-          open && "scale-0 opacity-0",
-          showPulse && !open && "animate-pulse shadow-[0_0_0_0_rgba(0,0,0,0)]",
+          "fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95",
+          open ? "scale-0 opacity-0" : "shadow-[0_0_20px] shadow-primary/50",
         )}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 300, delay: 0.5 }}
         aria-label="Open chat assistant"
       >
-        <MessageCircle className="h-6 w-6" />
-        {showPulse && !open && (
-          <span className="absolute -top-1 -right-1 whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground shadow-lg">
-            Need help?
-          </span>
-        )}
-      </button>
+        <motion.span
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground/10"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </motion.span>
+        <span className="pr-4 text-sm font-semibold tracking-wide">AI Assistant</span>
+        <motion.span
+          className="absolute -inset-1 rounded-full bg-primary"
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{ zIndex: -1 }}
+        />
+      </motion.button>
 
       <div
         className={cn(
@@ -212,7 +236,7 @@ export function ChatbotWidget() {
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Harmony Assistant</p>
+            <p className="text-sm font-semibold">AI Assistant</p>
             <p className="text-xs text-muted-foreground">Here to help 💙</p>
           </div>
           <button

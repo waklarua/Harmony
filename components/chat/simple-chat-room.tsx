@@ -168,10 +168,6 @@ export function SimpleChatRoom({
     })
 
     return () => {
-      if (channel) {
-        channel.unbind_all()
-        channel.unsubscribe()
-      }
       if (pusherClient) pusherClient.disconnect()
     }
   }, [sessionId, otherName, otherAvatar, currentUserId])

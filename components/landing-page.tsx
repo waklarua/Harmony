@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { motion, useInView } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -18,6 +19,10 @@ import {
   Star,
   Database,
   Mail,
+  Phone,
+  AlertCircle,
+  MessageCircle,
+  Calendar,
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 import { formatCurrency } from "@/lib/format"
@@ -41,10 +46,54 @@ function InstagramIcon({ className }: { className?: string }) {
   )
 }
 
+function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const isInView = useInView(ref, { once: true })
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!isInView) return
+    let start = 0
+    const duration = 2000
+    const step = Math.max(1, Math.floor(target / 60))
+    const interval = setInterval(() => {
+      start += step
+      if (start >= target) {
+        setCount(target)
+        clearInterval(interval)
+      } else {
+        setCount(start)
+      }
+    }, duration / 60)
+    return () => clearInterval(interval)
+  }, [isInView, target])
+
+  const display = target >= 1000 ? `${Math.floor(count / 1000)}k+` : count < 10 ? count.toFixed(1) : `${count}+`
+
+  return <span ref={ref}>{display}{suffix}</span>
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+}
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12 } },
+}
+
 export function LandingPage() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const { data: session } = authClient.useSession()
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   const handleLogout = async () => {
     await authClient.signOut()
@@ -53,7 +102,10 @@ export function LandingPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-screen flex-col bg-background">
+      {/* Dot grid background */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[length:24px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,black,transparent_70%)]" />
+
       <SkipLinks
         links={[
           { href: "#main-content", label: "Skip to main content" },
@@ -62,12 +114,22 @@ export function LandingPage() {
       />
 
       {/* Navigation */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header
+        className={`sticky top-0 z-50 transition-all duration-500 ${
+          scrolled
+            ? "border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-sm"
+            : "border-transparent bg-transparent"
+        }`}
+      >
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <motion.div
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary"
+              whileHover={{ scale: 1.1, rotate: -10 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
               <Heart className="h-5 w-5 text-primary-foreground" />
-            </div>
+            </motion.div>
             <span className="text-xl font-semibold tracking-tight">Harmony</span>
           </Link>
 
@@ -143,7 +205,11 @@ export function LandingPage() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-border bg-background p-4 md:hidden">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border-t border-border bg-background p-4 md:hidden"
+          >
             <div className="flex flex-col gap-4">
               <Link href="#how-it-works" className="text-sm text-muted-foreground">
                 How It Works
@@ -186,67 +252,141 @@ export function LandingPage() {
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </header>
 
       {/* Hero Section */}
       <section id="main-content" className="relative overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Your path to better <span className="text-primary">mental well-being</span> starts here
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-              Connect with licensed counselors in a secure, private environment. Get the support you deserve, on your
-              schedule.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/signup">
-                <Button size="lg" className="w-full gap-2 sm:w-auto">
-                  Find Your Counselor
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="#how-it-works">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto bg-transparent">
-                  Learn More
-                </Button>
-              </Link>
-            </div>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                <span>Secure Platform</span>
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+          <div className="relative flex flex-col items-center md:flex-row md:items-start md:gap-12">
+            <motion.div
+              className="mx-auto max-w-3xl text-center md:mx-0 md:flex-1 md:text-left"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+            >
+              <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                Your path to better{" "}
+                <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                  mental well-being
+                </span>
+                <br />
+                starts here
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl md:mx-0">
+                Connect with licensed counselors in a secure, private environment. Get the support you deserve, on your
+                schedule.
+              </p>
+              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row md:justify-start">
+                <Link href="/signup">
+                  <Button size="lg" className="w-full gap-2 sm:w-auto shadow-lg shadow-primary/25">
+                    Find Your Counselor
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="#how-it-works">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto bg-transparent">
+                    Learn More
+                  </Button>
+                </Link>
               </div>
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-primary" />
-                <span>End-to-End Encrypted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>Licensed Professionals</span>
-              </div>
-            </div>
+              <motion.div
+                className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-muted-foreground md:justify-start"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <span>Secure Platform</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-primary" />
+                  <span>End-to-End Encrypted</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <span>Licensed Professionals</span>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Floating counselor card */}
+            <motion.div
+              className="hidden md:block flex-shrink-0 mt-8 md:mt-0"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+            >
+              <motion.div
+                className="w-72 rounded-2xl border border-border bg-card/80 p-6 shadow-xl shadow-primary/5 backdrop-blur-sm"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <Heart className="h-7 w-7 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Dr. Alemayehu wase</p>
+                    <p className="text-xs text-muted-foreground">Licensed Counselor</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-1 text-sm">
+                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                  <span className="font-medium">4.9</span>
+                  <span className="text-muted-foreground">(128 reviews)</span>
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Available today</span>
+                  <span className="ml-auto inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    Online
+                  </span>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button size="sm" className="flex-1 gap-1 text-xs" asChild>
+                    <Link href="/signup">
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Book Session
+                    </Link>
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Trust Indicators */}
-      <section className="border-y border-border bg-muted/30 py-12">
+      {/* Stats Bar */}
+      <motion.section
+        className="border-y border-border bg-muted/30 py-12"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary sm:text-4xl">150+</div>
+              <div className="text-3xl font-bold text-primary sm:text-4xl">
+                <AnimatedCounter target={150} />
+              </div>
               <div className="mt-1 text-sm text-muted-foreground">Licensed Counselors</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary sm:text-4xl">12k+</div>
+              <div className="text-3xl font-bold text-primary sm:text-4xl">
+                <AnimatedCounter target={12000} />
+              </div>
               <div className="mt-1 text-sm text-muted-foreground">Sessions Completed</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary sm:text-4xl">4.8</div>
+              <div className="flex items-center justify-center text-3xl font-bold text-primary sm:text-4xl">
+                4.<AnimatedCounter target={8} />
+              </div>
               <div className="mt-1 flex items-center justify-center gap-1 text-sm text-muted-foreground">
                 <Star className="h-3 w-3 fill-primary text-primary" />
                 Average Rating
@@ -258,19 +398,35 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 sm:py-28">
+      <motion.section
+        id="how-it-works"
+        className="py-20 sm:py-28"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
+          <motion.div
+            className="mx-auto max-w-2xl text-center"
+            variants={fadeUp}
+          >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Getting started is simple</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               Begin your journey in just a few steps. We have made the process as straightforward as possible.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
+          <motion.div
+            className="mt-16 grid gap-8 md:grid-cols-3"
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
             {[
               {
                 step: "01",
@@ -294,83 +450,153 @@ export function LandingPage() {
                 icon: Clock,
               },
             ].map((item) => (
-              <Card key={item.step} className="relative overflow-hidden border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="relative">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <item.icon className="h-6 w-6 text-primary" />
+              <motion.div key={item.step} variants={fadeUp}>
+                <Card className="group relative overflow-hidden border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                  <CardContent className="p-6">
+                    <div className="relative">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                        <item.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
+                      <p className="mt-2 text-muted-foreground">{item.description}</p>
                     </div>
-                    <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
-                    <p className="mt-2 text-muted-foreground">{item.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Features Grid */}
-      <section className="bg-muted/30 py-20 sm:py-28">
+      {/* Features Grid - Bento Layout */}
+      <motion.section
+        className="bg-muted/30 py-20 sm:py-28"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
+          <motion.div
+            className="mx-auto max-w-2xl text-center"
+            variants={fadeUp}
+          >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Built for your peace of mind</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               Every feature designed with your comfort and security in mind.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: "Verified Professionals",
-                description: "Every counselor is licensed and thoroughly vetted before joining our platform.",
-                icon: CheckCircle,
-              },
-              {
-                title: "Complete Privacy",
-                description: "Your conversations are encrypted and your data is never shared without consent.",
-                icon: Lock,
-              },
-              {
-                title: "Flexible Scheduling",
-                description: "Book sessions that fit your life. Morning, evening, or weekend availability.",
-                icon: Clock,
-              },
-              {
-                title: "Multiple Session Types",
-                description: "Choose video, voice, or text-based sessions based on your comfort level.",
-                icon: Users,
-              },
-              {
-                title: "Progress Tracking",
-                description: "Monitor your journey with mood tracking and session notes.",
-                icon: Heart,
-              },
-              {
-                title: "Affordable Care",
-                description: `Transparent pricing starting from ${formatCurrency(5130)}/session. No hidden fees.`,
-                icon: Shield,
-              },
-            ].map((feature) => (
-              <Card key={feature.title} className="border-border bg-card">
-                <CardContent className="p-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <feature.icon className="h-5 w-5 text-primary" />
+          <motion.div
+            className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            {/* Featured card - spans 2 cols */}
+            <motion.div variants={fadeUp} className="sm:col-span-2 lg:col-span-2 lg:row-span-2">
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5">
+                <CardContent className="flex h-full flex-col justify-center p-8">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <CheckCircle className="h-7 w-7 text-primary" />
                   </div>
-                  <h3 className="mt-4 font-semibold">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+                  <h3 className="mt-5 text-2xl font-semibold">Verified Professionals</h3>
+                  <p className="mt-3 max-w-md text-base text-muted-foreground">
+                    Every counselor is licensed and thoroughly vetted before joining our platform. Your safety and quality of care are our top priorities.
+                  </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <Lock className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">Complete Privacy</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Your conversations are encrypted and your data is never shared without consent.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">Flexible Scheduling</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Book sessions that fit your life. Morning, evening, or weekend availability.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">Multiple Session Types</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Choose video, voice, or text-based sessions based on your comfort level.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <Heart className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">Progress Tracking</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Monitor your journey with mood tracking and session notes.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeUp}>
+              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <CardContent className="p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">Affordable Care</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Transparent pricing starting from {formatCurrency(5130)}/session. No hidden fees.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* For Counselors CTA */}
-      <section id="for-counselors" className="py-20 sm:py-28">
+      <motion.section
+        id="for-counselors"
+        className="py-20 sm:py-28"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-2xl bg-primary">
+          <motion.div
+            className="overflow-hidden rounded-2xl bg-primary"
+            whileHover={{ scale: 1.005 }}
+            transition={{ type: "spring", stiffness: 200 }}
+          >
             <div className="grid items-center gap-8 p-8 md:grid-cols-2 lg:p-12">
               <div>
                 <h2 className="text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
@@ -394,7 +620,7 @@ export function LandingPage() {
                   ))}
                 </ul>
                 <Link href="/signup?role=guide">
-                  <Button size="lg" variant="secondary" className="mt-8 gap-2">
+                  <Button size="lg" variant="secondary" className="mt-8 gap-2 shadow-lg">
                     Apply to Join
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -410,76 +636,112 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Privacy Section */}
-      <section id="privacy" className="bg-muted/30 py-20 sm:py-28">
+      <motion.section
+        id="privacy"
+        className="bg-muted/30 py-20 sm:py-28"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <motion.div
+            className="mx-auto max-w-3xl text-center"
+            variants={fadeUp}
+          >
+            <motion.div
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
               <Shield className="h-8 w-8 text-primary" />
-            </div>
+            </motion.div>
             <h2 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">Your privacy is our priority</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               We understand that seeking support requires trust. That is why we have built our platform with
               industry-leading security measures.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            <Card className="border p-6 text-center transition-shadow hover:shadow-md">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Lock className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">End-to-End Encryption</h3>
-              <p className="text-muted-foreground">
-                All communications are encrypted. Only you and your counselor can read your messages.
-              </p>
-            </Card>
+          <motion.div
+            className="mt-12 grid gap-8 md:grid-cols-3"
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <motion.div variants={fadeUp}>
+              <Card className="group border p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                  <Lock className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="mb-2 text-xl font-semibold">End-to-End Encryption</h3>
+                <p className="text-muted-foreground">
+                  All communications are encrypted. Only you and your counselor can read your messages.
+                </p>
+              </Card>
+            </motion.div>
 
-            <Card className="border p-6 text-center transition-shadow hover:shadow-md">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Shield className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Secure Platform</h3>
-              <p className="text-muted-foreground">
-                We meet the highest standards for healthcare data protection and privacy.
-              </p>
-            </Card>
+            <motion.div variants={fadeUp}>
+              <Card className="group border p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                  <Shield className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="mb-2 text-xl font-semibold">Secure Platform</h3>
+                <p className="text-muted-foreground">
+                  We meet the highest standards for healthcare data protection and privacy.
+                </p>
+              </Card>
+            </motion.div>
 
-            <Card className="border p-6 text-center transition-shadow hover:shadow-md">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Database className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">You Own Your Data</h3>
-              <p className="text-muted-foreground">
-                Export or delete your information at any time. Your data belongs to you.
-              </p>
-            </Card>
-          </div>
+            <motion.div variants={fadeUp}>
+              <Card className="group border p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
+                  <Database className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="mb-2 text-xl font-semibold">You Own Your Data</h3>
+                <p className="text-muted-foreground">
+                  Export or delete your information at any time. Your data belongs to you.
+                </p>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Final CTA */}
-      <section className="py-20 sm:py-28">
+      <motion.section
+        className="py-20 sm:py-28"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
+          <motion.div
+            className="mx-auto max-w-2xl text-center"
+            variants={fadeUp}
+          >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Ready to take the first step?</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               Reaching out is the hardest part. We are here to make the rest easy.
             </p>
-            <Link href="/signup">
-              <Button size="lg" className="mt-8 gap-2">
-                Get Started Today
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link href="/signup">
+                <Button size="lg" className="mt-8 gap-2 shadow-lg shadow-primary/25">
+                  Get Started Today
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </motion.div>
             <p className="mt-4 text-sm text-muted-foreground">No commitment required. Cancel anytime.</p>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="border-t border-border bg-muted/30 py-12">
@@ -496,7 +758,13 @@ export function LandingPage() {
                 Providing professional, confidential mental health support to empower individuals across Ethiopia.
               </p>
               <div className="mt-3">
-                <CrisisLink />
+                <Link
+                  href="/crisis"
+                  className="inline-flex w-full items-center gap-2 rounded-lg bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive transition-all duration-300 hover:bg-destructive/20 hover:shadow-lg hover:shadow-destructive/20 animate-pulse"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Need immediate help? Crisis resources →
+                </Link>
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <a

@@ -550,14 +550,6 @@ export function SessionRoom({
     })
 
     return () => {
-      if (presenceChannel) {
-        presenceChannel.unbind_all()
-        presenceChannel.unsubscribe()
-      }
-      if (privateChannel) {
-        privateChannel.unbind_all()
-        privateChannel.unsubscribe()
-      }
       if (pusherClient) pusherClient.disconnect()
     }
   }, [sessionId, counselorName, counselorAvatar, currentUserId, currentUserAvatar, addSystemMessage])
