@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
+import { findBestResponse } from "@/lib/chatbot-responses"
 
 const SYSTEM_PROMPT = `You are Harmony, a compassionate mental health support assistant for a counseling platform based in Ethiopia. Your role is to provide empathetic, helpful responses that encourage users to seek professional counseling.
 
@@ -47,6 +48,8 @@ function getClient(): OpenAI {
     openai = new OpenAI({
       apiKey: process.env.NVIDIA_API_KEY,
       baseURL: "https://integrate.api.nvidia.com/v1",
+      timeout: 10000,
+      maxRetries: 1,
     })
   }
   return openai
@@ -84,22 +87,35 @@ export async function POST(request: Request) {
 
     const client = getClient()
     const completion = await client.chat.completions.create({
-      model: "deepseek-ai/deepseek-v4-pro",
+      model: "z-ai/glm-5.2",
       messages: apiMessages,
-      temperature: 0.7,
-      top_p: 0.95,
+      temperature: 1,
+      top_p: 1,
       max_tokens: 1024,
+      seed: 42,
     })
 
     const reply = completion.choices[0]?.message?.content
 
     if (!reply) {
-      return NextResponse.json({ error: "Empty response from AI." }, { status: 502 })
+      throw new Error("Empty response from AI")
     }
 
     return NextResponse.json({ response: reply })
   } catch (err) {
     console.error("Chat API error:", err)
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 })
+
+    try {
+      const { messages } = await request.clone().json()
+      const lastUserMsg = messages?.filter((m: { role: string }) => m.role === "user").pop()?.content
+      if (lastUserMsg && typeof lastUserMsg === "string") {
+        const match = findBestResponse(lastUserMsg)
+        if (match) {
+          return NextResponse.json({ response: match.response })
+        }
+      }
+    } catch {}
+
+    return NextResponse.json({ error: "AI service unavailable." }, { status: 503 })
   }
 }
