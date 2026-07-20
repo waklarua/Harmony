@@ -564,20 +564,6 @@ export function LandingPage() {
                 </CardContent>
               </Card>
             </motion.div>
-
-            <motion.div variants={fadeUp}>
-              <Card className="group h-full border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
-                <CardContent className="p-6">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="mt-4 font-semibold">Affordable Care</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Transparent pricing starting from {formatCurrency(5130)}/session. No hidden fees.
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
           </motion.div>
         </div>
       </motion.section>
